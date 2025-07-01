@@ -274,13 +274,13 @@ class Invoice(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
-    lines = db.relationship('InvoiceLine', backref='invoice', lazy=True, cascade='all, delete-orphan')
+    items = db.relationship('InvoiceItem', backref='invoice', lazy=True, cascade='all, delete-orphan')
     
     __table_args__ = (db.UniqueConstraint('company_id', 'invoice_number', name='unique_company_invoice_number'),)
 
-class InvoiceLine(db.Model):
-    __tablename__ = 'invoice_lines'
-    
+class InvoiceItem(db.Model):
+    __tablename__ = 'invoice_items'
+
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     invoice_id = db.Column(db.String(36), db.ForeignKey('invoices.id'), nullable=False)
     work_order_id = db.Column(db.String(36), db.ForeignKey('work_orders.id'))
@@ -289,8 +289,12 @@ class InvoiceLine(db.Model):
     quantity = db.Column(db.Numeric(10,2), nullable=False)
     unit_price = db.Column(db.Numeric(10,2), nullable=False)
     vat_rate = db.Column(db.Numeric(5,2), nullable=False)
-    line_total = db.Column(db.Numeric(10,2), nullable=False)
+    total_price = db.Column(db.Numeric(10,2), nullable=False)
     sort_order = db.Column(db.Integer, default=0)
+
+    article = db.relationship('Article', backref='invoice_items', lazy=True)
+    work_order = db.relationship('WorkOrder', backref='invoice_items', lazy=True)
+
 
 class Attachment(db.Model):
     __tablename__ = 'attachments'
