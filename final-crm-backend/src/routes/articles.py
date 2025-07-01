@@ -5,6 +5,27 @@ from sqlalchemy import or_
 
 articles_bp = Blueprint('articles', __name__)
 
+def _parse_int_arg(name, default=None, max_value=None):
+    raw = request.args.get(name, default)
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        value = default
+    if max_value is not None and isinstance(value, int):
+        value = min(value, max_value)
+    return value
+
+def _parse_bool_arg(name, default=False):
+    raw = request.args.get(name)
+    if raw is None:
+        return default
+    val = str(raw).strip().lower()
+    if val in ['true', '1', 'yes', 'y']:
+        return True
+    if val in ['false', '0', 'no', 'n']:
+        return False
+    return default
+
 def get_user_company_id():
     """Helper function to get current user's company ID"""
     user_id = get_jwt_identity()
@@ -20,13 +41,13 @@ def get_articles():
         if not company_id:
             return jsonify({'error': 'User not found'}), 404
         
-        # Get query parameters
-        page = request.args.get('page', 1, type=int)
-        per_page = min(request.args.get('per_page', 50, type=int), 100)
-        search = request.args.get('search', '')
-        category_id = request.args.get('category_id')
-        active_only = request.args.get('active_only', 'true').lower() == 'true'
-        low_stock = request.args.get('low_stock', 'false').lower() == 'true'
+        # Parse query parameters
+        page = _parse_int_arg('page', 1)
+        per_page = _parse_int_arg('per_page', 50, max_value=100)
+        search = request.args.get('search', '').strip()
+        category_id = _parse_int_arg('category_id', None)
+        active_only = _parse_bool_arg('active_only', True)
+        low_stock = _parse_bool_arg('low_stock', False)
         
         # Build query
         query = Article.query.filter_by(company_id=company_id)

@@ -4,7 +4,7 @@ from datetime import timedelta
 # DON'T CHANGE THIS !!!
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from flask import Flask, send_from_directory
+from flask import Flask, send_from_directory, jsonify
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from dotenv import load_dotenv
@@ -45,6 +45,14 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # Initialize extensions
 CORS(app, origins="*")
 jwt = JWTManager(app)
+
+@jwt.unauthorized_loader
+def _jwt_missing_token_callback(reason):
+    return jsonify({'error': reason}), 401
+
+@jwt.invalid_token_loader
+def _jwt_invalid_token_callback(reason):
+    return jsonify({'error': reason}), 401
 db.init_app(app)
 
 # Register blueprints

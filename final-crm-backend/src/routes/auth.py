@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
+import uuid
 from src.models.database import db, User, Company
 from datetime import datetime
 
@@ -52,7 +53,7 @@ def register():
         db.session.commit()
         
         # Create access token
-        access_token = create_access_token(identity=user.id)
+        access_token = create_access_token(identity=str(user.id))
         
         return jsonify({
             'message': 'Registration successful',
@@ -97,7 +98,7 @@ def login():
         db.session.commit()
         
         # Create access token
-        access_token = create_access_token(identity=user.id)
+        access_token = create_access_token(identity=str(user.id))
         
         return jsonify({
             'message': 'Login successful',
@@ -121,7 +122,11 @@ def login():
 def get_current_user():
     """Get current user info"""
     try:
-        user_id = get_jwt_identity()
+        identity = get_jwt_identity()
+        try:
+            user_id = uuid.UUID(identity)
+        except (TypeError, ValueError):
+            user_id = identity
         user = User.query.get(user_id)
         
         if not user:

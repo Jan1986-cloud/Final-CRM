@@ -7,6 +7,27 @@ from decimal import Decimal
 
 invoices_bp = Blueprint('invoices', __name__)
 
+def _parse_int_arg(name, default=None, max_value=None):
+    raw = request.args.get(name, default)
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        value = default
+    if max_value is not None and isinstance(value, int):
+        value = min(value, max_value)
+    return value
+
+def _parse_bool_arg(name, default=False):
+    raw = request.args.get(name)
+    if raw is None:
+        return default
+    val = str(raw).strip().lower()
+    if val in ['true', '1', 'yes', 'y']:
+        return True
+    if val in ['false', '0', 'no', 'n']:
+        return False
+    return default
+
 @invoices_bp.route('/', methods=['GET'])
 @jwt_required()
 def get_invoices():
@@ -18,11 +39,11 @@ def get_invoices():
         if not user or not user.company_id:
             return jsonify({'error': 'User not found or not associated with company'}), 404
             
-        # Get query parameters
-        page = request.args.get('page', 1, type=int)
-        per_page = min(request.args.get('per_page', 20, type=int), 100)
-        status = request.args.get('status')
-        customer_id = request.args.get('customer_id', type=int)
+        # Parse query parameters
+        page = _parse_int_arg('page', 1)
+        per_page = _parse_int_arg('per_page', 20, max_value=100)
+        status = request.args.get('status', None)
+        customer_id = _parse_int_arg('customer_id', None)
         
         # Build query
         query = Invoice.query.filter_by(company_id=user.company_id)
