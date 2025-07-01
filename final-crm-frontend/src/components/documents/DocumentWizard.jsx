@@ -1,14 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useToast } from '../../contexts/ToastContext'
 import { useAuth } from '../../contexts/AuthContext'
-import { 
-  FileText, 
-  Clock, 
-  Receipt, 
-  Calculator, 
+import {
+  FileText,
+  Receipt,
   CreditCard,
-  Users,
   ArrowRight,
   CheckCircle
 } from 'lucide-react'
@@ -18,18 +15,9 @@ function DocumentWizard() {
   const [step, setStep] = useState(1)
   const navigate = useNavigate()
   const { success } = useToast()
-  const { user } = useAuth()
+  const { user, hasPermission } = useAuth()
 
   const documentTypes = [
-    {
-      id: 'time_registration',
-      title: 'Urenregistratie',
-      description: 'Voor kantoor/magazijn personeel of niet factureerbare uren',
-      icon: Clock,
-      color: 'bg-blue-500',
-      roles: ['admin', 'manager', 'technician'],
-      route: '/work-orders/new?type=time_registration'
-    },
     {
       id: 'quote',
       title: 'Offerte',
@@ -49,15 +37,6 @@ function DocumentWizard() {
       route: '/work-orders/new'
     },
     {
-      id: 'invoice_combined',
-      title: 'Factuur Gecombineerd',
-      description: 'Factuur op basis van ingevulde werkbonnen',
-      icon: Calculator,
-      color: 'bg-purple-500',
-      roles: ['admin', 'manager', 'financial'],
-      route: '/invoices/new?type=combined'
-    },
-    {
       id: 'invoice',
       title: 'Factuur',
       description: 'Factuur voor losse artikelen en/of abonnementen',
@@ -68,9 +47,8 @@ function DocumentWizard() {
     }
   ]
 
-  // Filter document types based on user role
-  const availableTypes = documentTypes.filter(type => 
-    type.roles.includes(user?.role) || user?.role === 'admin'
+  const availableTypes = documentTypes.filter(type =>
+    type.roles.some(role => hasPermission(role))
   )
 
   const handleTypeSelection = (type) => {
@@ -189,16 +167,6 @@ function DocumentWizard() {
                     <p>• Foto's toevoegen (optioneel)</p>
                   </div>
                 )}
-                
-                {selectedType === 'invoice_combined' && (
-                  <div className="text-sm text-purple-600">
-                    <p>• Voltooide werkbonnen selecteren</p>
-                    <p>• Automatische berekening totaalbedrag</p>
-                    <p>• Factuur genereren</p>
-                    <p>• Werkbonnen markeren als gefactureerd</p>
-                  </div>
-                )}
-                
                 {selectedType === 'invoice' && (
                   <div className="text-sm text-red-600">
                     <p>• Klant selecteren</p>
@@ -208,14 +176,6 @@ function DocumentWizard() {
                   </div>
                 )}
                 
-                {selectedType === 'time_registration' && (
-                  <div className="text-sm text-blue-600">
-                    <p>• Datum en tijd registreren</p>
-                    <p>• Type werk specificeren</p>
-                    <p>• Niet-factureerbare uren</p>
-                    <p>• Rapportage voor administratie</p>
-                  </div>
-                )}
               </div>
 
               <div className="flex justify-between">
