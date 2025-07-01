@@ -212,7 +212,9 @@ class WorkOrder(db.Model):
     
     # Relationships
     lines = db.relationship('WorkOrderLine', backref='work_order', lazy=True, cascade='all, delete-orphan')
-    time_registrations = db.relationship('TimeRegistration', backref='work_order', lazy=True)
+    time_entries = db.relationship(
+        'WorkOrderTimeEntry', backref='work_order', lazy=True, cascade='all, delete-orphan'
+    )
     
     __table_args__ = (db.UniqueConstraint('company_id', 'work_order_number', name='unique_company_work_order_number'),)
 
@@ -229,20 +231,22 @@ class WorkOrderLine(db.Model):
     line_total = db.Column(db.Numeric(10,2), nullable=False)
     sort_order = db.Column(db.Integer, default=0)
 
-class TimeRegistration(db.Model):
-    __tablename__ = 'time_registrations'
-    
+class WorkOrderTimeEntry(db.Model):
+    __tablename__ = 'work_order_time_entries'
+
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     company_id = db.Column(db.String(36), db.ForeignKey('companies.id'), nullable=False)
     user_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
-    work_order_id = db.Column(db.String(36), db.ForeignKey('work_orders.id'))
-    date = db.Column(db.Date, nullable=False)
+    work_order_id = db.Column(db.String(36), db.ForeignKey('work_orders.id'), nullable=False)
+    date = db.Column(db.Date, default=date.today, nullable=False)
     start_time = db.Column(db.Time)
     end_time = db.Column(db.Time)
     hours = db.Column(db.Numeric(4,2), nullable=False)
     hourly_rate = db.Column(db.Numeric(10,2))
-    description = db.Column(db.Text)
-    is_billable = db.Column(db.Boolean, default=True)
+    description = db.Column(db.Text, nullable=False)
+    billable = db.Column(db.Boolean, default=True)
+    billable_amount = db.Column(db.Numeric(10,2), default=0)
+    vat_rate = db.Column(db.Numeric(5,2), default=21.00)
     is_invoiced = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
