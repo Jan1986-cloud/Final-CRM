@@ -30,7 +30,7 @@ function Layout() {
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home, roles: ['all'] },
-    { name: 'Nieuw Document', href: '/create', icon: Plus, roles: ['all'], highlight: true },
+    { name: 'Nieuw Document', href: '/documents', icon: Plus, roles: ['all'], highlight: true },
     { name: 'Klanten', href: '/customers', icon: Users, roles: ['admin', 'manager', 'sales'] },
     { name: 'Artikelen', href: '/articles', icon: Package, roles: ['admin', 'manager'] },
     { name: 'Offertes', href: '/quotes', icon: FileText, roles: ['admin', 'manager', 'sales'] },

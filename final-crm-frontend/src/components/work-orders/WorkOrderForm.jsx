@@ -25,36 +25,36 @@ function WorkOrderForm() {
   const [formData, setFormData] = useState({
     customer_id: searchParams.get('customer_id') || '',
     quote_id: searchParams.get('quote_id') || '',
-    title: '',
-    description: '',
+    title: 'Onderhoud Kantoorgebouw',
+    description: 'Inspectie en onderhoudswerkzaamheden binnen en buiten',
     work_date: new Date().toISOString().split('T')[0],
-    scheduled_time: '',
-    location: '',
+    scheduled_time: '09:00',
+    location: 'Kantoorstraat 12, Amsterdam',
     status: 'draft',
     priority: 'normal',
-    notes: '',
-    internal_notes: ''
+    notes: 'Klant aanwezig voor toegang tot alle ruimtes',
+    internal_notes: 'Neem ladder, verf en veiligheidshelm mee'
   })
 
   const [timeEntries, setTimeEntries] = useState([
     {
       id: Date.now(),
-      start_time: '',
-      end_time: '',
-      break_minutes: 0,
-      description: '',
-      hours_worked: 0
+      start_time: '09:00',
+      end_time: '12:30',
+      break_minutes: 30,
+      description: 'Inspectie en schilderwerk',
+      hours_worked: 3
     }
   ])
 
   const [materials, setMaterials] = useState([
     {
-      id: Date.now(),
-      description: '',
-      quantity: 1,
-      unit: 'stuks',
-      unit_price: 0,
-      total: 0
+      id: Date.now() + 1,
+      description: 'Verfblikken wit',
+      quantity: 5,
+      unit: 'liter',
+      unit_price: 20,
+      total: 5 * 20
     }
   ])
 

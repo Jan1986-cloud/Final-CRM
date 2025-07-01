@@ -23,24 +23,24 @@ function QuoteForm() {
 
   const [formData, setFormData] = useState({
     customer_id: searchParams.get('customer_id') || '',
-    title: '',
-    description: '',
+    title: 'Offerte Onderhoud Kantoorpand',
+    description: 'Regulier onderhoud en schilderwerk voor kantoorpand',
     quote_date: new Date().toISOString().split('T')[0],
-    valid_until: '',
+    valid_until: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     status: 'draft',
-    notes: '',
-    terms_conditions: 'Standaard leveringsvoorwaarden van toepassing.'
+    notes: 'Voor akkoord af te drukken en ondertekenen.',
+    terms_conditions: 'Betaling binnen 14 dagen na factuurdatum. Standaard leveringsvoorwaarden van toepassing.'
   })
 
   const [quoteLines, setQuoteLines] = useState([
     {
       id: Date.now(),
       article_id: searchParams.get('article_id') || '',
-      description: '',
-      quantity: 1,
-      unit_price: 0,
+      description: 'Schilderwerk binnenkant kantoor',
+      quantity: 10,
+      unit_price: 50,
       vat_rate: 21,
-      total: 0
+      total: 10 * 50
     }
   ])
 

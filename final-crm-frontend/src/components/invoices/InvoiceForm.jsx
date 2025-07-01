@@ -23,24 +23,24 @@ function InvoiceForm() {
   const [formData, setFormData] = useState({
     customer_id: searchParams.get('customer_id') || '',
     invoice_type: searchParams.get('type') === 'combined' ? 'combined' : 'standard',
-    title: '',
-    description: '',
+    title: 'Factuur Onderhoud Kantoor',
+    description: 'Factuur voor uitgevoerde onderhoudswerkzaamheden',
     invoice_date: new Date().toISOString().split('T')[0],
     due_date: '',
-    payment_terms: '30',
+    payment_terms: '14',
     status: 'draft',
-    notes: '',
-    terms_conditions: 'Betaling binnen 30 dagen na factuurdatum.'
+    notes: 'Contact voor vragen: info@bedrijf.nl',
+    terms_conditions: 'Betaling binnen 14 dagen na factuurdatum.'
   })
 
   const [invoiceLines, setInvoiceLines] = useState([
     {
       id: Date.now(),
-      description: '',
-      quantity: 1,
-      unit_price: 0,
+      description: 'Schilderwerk binnenkant kantoor',
+      quantity: 10,
+      unit_price: 50,
       vat_rate: 21,
-      total: 0
+      total: 10 * 50
     }
   ])
 

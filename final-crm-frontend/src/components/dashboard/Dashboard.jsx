@@ -236,7 +236,7 @@ function Dashboard() {
       <div className="mb-8">
         <div className="flex flex-wrap gap-4">
           <Link
-            to="/create"
+            to="/documents"
             className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center"
           >
             <Plus className="h-5 w-5 mr-2" />
