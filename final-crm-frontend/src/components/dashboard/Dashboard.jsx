@@ -108,45 +108,6 @@ function Dashboard() {
         }
       })
 
-      // Mock recent activity (in real app, this would come from an activity log)
-      setRecentActivity([
-        {
-          id: 1,
-          type: 'quote',
-          title: 'Offerte O2024-0156 aangemaakt',
-          description: 'Voor ABC Company B.V.',
-          time: '2 uur geleden',
-          icon: FileText,
-          color: 'text-blue-500'
-        },
-        {
-          id: 2,
-          type: 'work_order',
-          title: 'Werkbon W2024-0234 voltooid',
-          description: 'Installatie bij XYZ B.V.',
-          time: '4 uur geleden',
-          icon: Receipt,
-          color: 'text-orange-500'
-        },
-        {
-          id: 3,
-          type: 'invoice',
-          title: 'Factuur F2024-0123 verzonden',
-          description: 'Betaling binnen 30 dagen',
-          time: '1 dag geleden',
-          icon: CreditCard,
-          color: 'text-red-500'
-        },
-        {
-          id: 4,
-          type: 'customer',
-          title: 'Nieuwe klant toegevoegd',
-          description: 'DEF Installaties B.V.',
-          time: '2 dagen geleden',
-          icon: Users,
-          color: 'text-green-500'
-        }
-      ])
       
     } catch (error) {
       console.error('Error loading dashboard data:', error)
@@ -255,28 +216,34 @@ function Dashboard() {
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {statCards.map((card) => {
-          const Icon = card.icon
-          return (
-            <Link
-              key={card.title}
-              to={card.link}
-              className="bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">{card.title}</p>
-                  <p className="text-3xl font-bold text-gray-900">{card.value}</p>
-                  <p className="text-sm text-gray-500">{card.subtitle}</p>
-                </div>
-                <div className={`${card.color} p-3 rounded-full`}>
-                  <Icon className="h-6 w-6 text-white" />
-                </div>
-              </div>
-            </Link>
-          )
-        })}
+      <div className="mb-8">
+        {stats.quotes.total + stats.workOrders.total + stats.invoices.total + stats.customers.total === 0 ? (
+          <div className="text-gray-500">Geen data beschikbaar</div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {statCards.map((card) => {
+              const Icon = card.icon
+              return (
+                <Link
+                  key={card.title}
+                  to={card.link}
+                  className="bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">{card.title}</p>
+                      <p className="text-3xl font-bold text-gray-900">{card.value}</p>
+                      <p className="text-sm text-gray-500">{card.subtitle}</p>
+                    </div>
+                    <div className={`${card.color} p-3 rounded-full`}>
+                      <Icon className="h-6 w-6 text-white" />
+                    </div>
+                  </div>
+                </Link>
+              )
+            })}
+          </div>
+        )}
       </div>
 
       {/* Main Content Grid */}
@@ -289,27 +256,31 @@ function Dashboard() {
             </div>
             <div className="p-6">
               <div className="space-y-4">
-                {recentActivity.map((activity) => {
-                  const Icon = activity.icon
-                  return (
-                    <div key={activity.id} className="flex items-start space-x-3">
-                      <div className={`${activity.color} mt-1`}>
-                        <Icon className="h-5 w-5" />
+                {recentActivity.length === 0 ? (
+                  <p className="text-gray-500">Geen recente activiteit beschikbaar</p>
+                ) : (
+                  recentActivity.map((activity) => {
+                    const Icon = activity.icon
+                    return (
+                      <div key={activity.id} className="flex items-start space-x-3">
+                        <div className={`${activity.color} mt-1`}>
+                          <Icon className="h-5 w-5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900">
+                            {activity.title}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            {activity.description}
+                          </p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            {activity.time}
+                          </p>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900">
-                          {activity.title}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {activity.description}
-                        </p>
-                        <p className="text-xs text-gray-400 mt-1">
-                          {activity.time}
-                        </p>
-                      </div>
-                    </div>
-                  )
-                })}
+                    )
+                  })
+                )}
               </div>
             </div>
           </div>

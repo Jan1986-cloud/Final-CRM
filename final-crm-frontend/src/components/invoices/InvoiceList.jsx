@@ -170,6 +170,21 @@ function InvoiceList() {
     )
   }
 
+  if (!loading && invoices.length === 0) {
+    return (
+      <div className="p-6 text-center">
+        <p className="text-gray-500">Geen facturen gevonden.</p>
+        <Link
+          to="/invoices/new"
+          className="mt-4 inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Nieuwe Factuur
+        </Link>
+      </div>
+    )
+  }
+
   return (
     <div className="p-6">
       {/* Header */}

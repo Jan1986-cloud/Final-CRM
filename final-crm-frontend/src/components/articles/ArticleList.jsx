@@ -54,7 +54,12 @@ function ArticleList() {
         params.category = categoryFilter
       }
       if (stockFilter) {
-        params.stock_filter = stockFilter
+        // backend expects low_stock boolean flag for low or out of stock filtering
+        if (stockFilter === 'low_stock') {
+          params.low_stock = true
+        } else if (stockFilter === 'out_of_stock') {
+          params.low_stock = false
+        }
       }
       
       const response = await articleService.getAll(params)
@@ -171,6 +176,21 @@ function ArticleList() {
             ))}
           </div>
         </div>
+      </div>
+    )
+  }
+
+  if (!loading && articles.length === 0) {
+    return (
+      <div className="p-6 text-center">
+        <p className="text-gray-500">Geen artikelen gevonden.</p>
+        <Link
+          to="/articles/new"
+          className="mt-4 inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Nieuw Artikel
+        </Link>
       </div>
     )
   }

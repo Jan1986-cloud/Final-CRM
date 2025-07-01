@@ -16,8 +16,6 @@ function DocumentWizard() {
   const navigate = useNavigate()
   const { success } = useToast()
   const { user, hasPermission } = useAuth()
-  console.log('DocumentWizard user:', user)
-  console.log('DocumentWizard user role:', user?.role)
 
   const documentTypes = [
     {
@@ -52,7 +50,6 @@ function DocumentWizard() {
   const availableTypes = documentTypes.filter(type =>
     type.roles.some(role => hasPermission(role))
   )
-  console.log('DocumentWizard availableTypes:', availableTypes)
 
   const handleTypeSelection = (type) => {
     setSelectedType(type.id)
@@ -105,35 +102,48 @@ function DocumentWizard() {
 
         {/* Step 1: Document Type Selection */}
         {step === 1 && (
-          availableTypes.length === 0 ? (
-            <p>Geen documenttypen beschikbaar of onvoldoende rechten.</p>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {availableTypes.map((type) => {
-                const IconComponent = type.icon
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {documentTypes.map((type) => {
+              const permitted = type.roles.some((role) => {
+                const allowed = hasPermission(role)
+                if (!allowed) {
+                  console.warn(`Geen toestemming voor documenttype ${type.title}`)
+                }
+                return allowed
+              })
 
-                return (
-                  <div
-                    key={type.id}
-                    onClick={() => handleTypeSelection(type)}
-                    className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:scale-105 p-6"
-                  >
-                    <div className="flex flex-col items-center text-center">
-                      <div className={`${type.color} p-4 rounded-full mb-4`}>
-                        <IconComponent className="h-8 w-8 text-white" />
-                      </div>
-                      <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                        {type.title}
-                      </h3>
-                      <p className="text-gray-600 text-sm leading-relaxed">
-                        {type.description}
-                      </p>
+              const IconComponent = type.icon
+
+              return (
+                <div
+                  key={type.id}
+                  onClick={() => permitted && handleTypeSelection(type)}
+                  className={`bg-white rounded-xl shadow-lg transition-all duration-300 p-6 ${
+                    permitted
+                      ? 'cursor-pointer hover:shadow-xl transform hover:scale-105'
+                      : 'opacity-50 cursor-not-allowed'
+                  }`}
+                >
+                  <div className="flex flex-col items-center text-center">
+                    <div className={`${type.color} p-4 rounded-full mb-4`}>
+                      <IconComponent className="h-8 w-8 text-white" />
                     </div>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                      {type.title}
+                    </h3>
+                    <p className="text-gray-600 text-sm leading-relaxed">
+                      {type.description}
+                    </p>
                   </div>
-                )
-              })}
-            </div>
-          )
+                </div>
+              )
+            })}
+            {availableTypes.length === 0 && (
+              <div className="col-span-full text-center text-gray-500">
+                Je hebt geen toestemming om documenten te maken.
+              </div>
+            )}
+          </div>
         )}
 
         {/* Step 2: Confirmation */}

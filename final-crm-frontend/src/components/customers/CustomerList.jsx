@@ -141,6 +141,21 @@ function CustomerList() {
     )
   }
 
+  if (!loading && customers.length === 0) {
+    return (
+      <div className="p-6 text-center">
+        <p className="text-gray-500">Geen klanten gevonden.</p>
+        <Link
+          to="/customers/new"
+          className="mt-4 inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Nieuwe Klant
+        </Link>
+      </div>
+    )
+  }
+
   return (
     <div className="p-6">
       {/* Header */}
