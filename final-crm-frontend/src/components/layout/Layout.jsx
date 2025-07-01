@@ -17,7 +17,7 @@ import {
   Building
 } from 'lucide-react'
 
-function Layout() {
+function Layout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const { user, logout, hasPermission } = useAuth()
   const location = useLocation()
@@ -192,7 +192,7 @@ function Layout() {
 
         {/* Page content */}
         <main className="min-h-screen">
-          <Outlet />
+          {children || <Outlet />}
         </main>
       </div>
     </div>

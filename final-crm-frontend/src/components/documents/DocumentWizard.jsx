@@ -72,6 +72,7 @@ function DocumentWizard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
+      <p>DocumentWizard test rendering</p>
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
