@@ -16,6 +16,8 @@ function DocumentWizard() {
   const navigate = useNavigate()
   const { success } = useToast()
   const { user, hasPermission } = useAuth()
+  console.log('DocumentWizard user:', user)
+  console.log('DocumentWizard user role:', user?.role)
 
   const documentTypes = [
     {
@@ -50,6 +52,7 @@ function DocumentWizard() {
   const availableTypes = documentTypes.filter(type =>
     type.roles.some(role => hasPermission(role))
   )
+  console.log('DocumentWizard availableTypes:', availableTypes)
 
   const handleTypeSelection = (type) => {
     setSelectedType(type.id)
@@ -102,30 +105,35 @@ function DocumentWizard() {
 
         {/* Step 1: Document Type Selection */}
         {step === 1 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {availableTypes.map((type) => {
-              const IconComponent = type.icon
-              return (
-                <div
-                  key={type.id}
-                  onClick={() => handleTypeSelection(type)}
-                  className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:scale-105 p-6"
-                >
-                  <div className="flex flex-col items-center text-center">
-                    <div className={`${type.color} p-4 rounded-full mb-4`}>
-                      <IconComponent className="h-8 w-8 text-white" />
+          availableTypes.length === 0 ? (
+            <p>Geen documenttypen beschikbaar of onvoldoende rechten.</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {availableTypes.map((type) => {
+                const IconComponent = type.icon
+
+                return (
+                  <div
+                    key={type.id}
+                    onClick={() => handleTypeSelection(type)}
+                    className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:scale-105 p-6"
+                  >
+                    <div className="flex flex-col items-center text-center">
+                      <div className={`${type.color} p-4 rounded-full mb-4`}>
+                        <IconComponent className="h-8 w-8 text-white" />
+                      </div>
+                      <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                        {type.title}
+                      </h3>
+                      <p className="text-gray-600 text-sm leading-relaxed">
+                        {type.description}
+                      </p>
                     </div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                      {type.title}
-                    </h3>
-                    <p className="text-gray-600 text-sm leading-relaxed">
-                      {type.description}
-                    </p>
                   </div>
-                </div>
-              )
-            })}
-          </div>
+                )
+              })}
+            </div>
+          )
         )}
 
         {/* Step 2: Confirmation */}
