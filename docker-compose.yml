@@ -17,7 +17,7 @@ services:
 
   # Backend API
   backend:
-    build: ./final-crm-backend
+    build: ./backend
     environment:
       DATABASE_URL: postgresql://crm_user:crm_password@postgres:5432/final_crm
       SECRET_KEY: your-secret-key-here-change-in-production
@@ -33,7 +33,7 @@ services:
 
   # Frontend
   frontend:
-    build: ./final-crm-frontend
+    build: ./frontend
     ports:
       - "80:80"
     depends_on:
