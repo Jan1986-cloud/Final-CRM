@@ -20,8 +20,9 @@ export function AuthProvider({ children }) {
     const token = localStorage.getItem('token')
     if (token) {
       // Verify token and get user info
-      api.get('/auth/me')
-        .then(response => {
+      api
+        .get('/auth/me')
+        .then((response) => {
           setUser(response.data.user)
         })
         .catch(() => {
@@ -38,17 +39,17 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     try {
-      const response = await api.post('/auth/login', { username: email, password })
+      const response = await api.post('/auth/login', { email, password })
       const { token, user: userData } = response.data
-      
+
       localStorage.setItem('token', token)
       setUser(userData)
-      
+
       return { success: true }
     } catch (error) {
-      return { 
-        success: false, 
-        error: error.response?.data?.error || 'Login failed' 
+      return {
+        success: false,
+        error: error.response?.data?.error || 'Login failed',
       }
     }
   }
@@ -57,15 +58,15 @@ export function AuthProvider({ children }) {
     try {
       const response = await api.post('/auth/register', userData)
       const { token, user: newUser } = response.data
-      
+
       localStorage.setItem('token', token)
       setUser(newUser)
-      
+
       return { success: true }
     } catch (error) {
-      return { 
-        success: false, 
-        error: error.response?.data?.error || 'Registration failed' 
+      return {
+        success: false,
+        error: error.response?.data?.error || 'Registration failed',
       }
     }
   }
@@ -76,22 +77,22 @@ export function AuthProvider({ children }) {
   }
 
   const updateUser = (userData) => {
-    setUser(prev => ({ ...prev, ...userData }))
+    setUser((prev) => ({ ...prev, ...userData }))
   }
 
   const hasPermission = (requiredRole) => {
     if (!user) return false
     if (user.role === 'admin') return true
-    
+
     const roleHierarchy = {
-      'admin': 5,
-      'manager': 4,
-      'sales': 3,
-      'technician': 2,
-      'financial': 2,
-      'user': 1
+      admin: 5,
+      manager: 4,
+      sales: 3,
+      technician: 2,
+      financial: 2,
+      user: 1,
     }
-    
+
     return roleHierarchy[user.role] >= roleHierarchy[requiredRole]
   }
 
@@ -102,13 +103,8 @@ export function AuthProvider({ children }) {
     register,
     logout,
     updateUser,
-    hasPermission
+    hasPermission,
   }
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  )
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
-
