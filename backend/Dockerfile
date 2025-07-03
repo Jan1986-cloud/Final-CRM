@@ -28,5 +28,5 @@ ENV PYTHONPATH=/app
 # Run the application
 # Development: CMD ["python", "-m", "flask", "run", "--host=0.0.0.0", "--port=5000"]
 # Production with gunicorn:
-CMD ["gunicorn", "-b", "0.0.0.0:5000", "src.main:app"]
+CMD ["gunicorn", "-b", "0.0.0.0:$PORT", "src.main:app"]
 
