@@ -39,7 +39,7 @@ class ConsistencyChecker:
     
     def extract_model_tables(self):
         """Extract model table names and fields from SQLAlchemy models"""
-        models_file = self.project_root / "final-crm-backend" / "src" / "models" / "database.py"
+        models_file = self.project_root / "backend" / "src" / "models" / "database.py"
         models = {}
         
         with open(models_file, 'r') as f:
@@ -70,7 +70,7 @@ class ConsistencyChecker:
     
     def extract_api_endpoints(self):
         """Extract API endpoints from frontend code"""
-        api_file = self.project_root / "final-crm-frontend" / "src" / "services" / "api.js"
+        api_file = self.project_root / "frontend" / "src" / "services" / "api.js"
         endpoints = defaultdict(list)
         
         with open(api_file, 'r') as f:
@@ -90,7 +90,7 @@ class ConsistencyChecker:
     def extract_backend_routes(self):
         """Extract route definitions from Flask backend"""
         routes = defaultdict(list)
-        routes_dir = self.project_root / "final-crm-backend" / "src" / "routes"
+        routes_dir = self.project_root / "backend" / "src" / "routes"
         
         for route_file in routes_dir.glob("*.py"):
             if route_file.name == "__init__.py":
