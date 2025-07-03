@@ -53,11 +53,11 @@ def register():
         db.session.commit()
         
         # Create access token
-        access_token = create_access_token(identity=str(user.id))
+        token = create_access_token(identity=str(user.id))
         
         return jsonify({
             'message': 'Registration successful',
-            'access_token': access_token,
+            'token': token,
             'user': {
                 'id': user.id,
                 'username': user.username,
@@ -79,12 +79,13 @@ def login():
     try:
         data = request.get_json()
         
-        if not data.get('username') or not data.get('password'):
-            return jsonify({'error': 'Username and password required'}), 400
-        
+        login_id = data.get('email') or data.get('username')
+        if not login_id or not data.get('password'):
+            return jsonify({'error': 'Email/username and password required'}), 400
+
         # Find user by username or email
         user = User.query.filter(
-            (User.username == data['username']) | (User.email == data['username'])
+            (User.username == login_id) | (User.email == login_id)
         ).first()
         
         if not user or not user.check_password(data['password']):
@@ -98,11 +99,11 @@ def login():
         db.session.commit()
         
         # Create access token
-        access_token = create_access_token(identity=str(user.id))
+        token = create_access_token(identity=str(user.id))
         
         return jsonify({
             'message': 'Login successful',
-            'access_token': access_token,
+            'token': token,
             'user': {
                 'id': user.id,
                 'username': user.username,
