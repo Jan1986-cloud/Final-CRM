@@ -2,4 +2,3 @@ final-crm-frontend/node_modules/
 final-crm-backend/__pycache__/
 final-crm-backend/venv/
 .env
-.env

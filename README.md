@@ -154,15 +154,17 @@ npm run dev
 
 ## 🔧 **Configuratie**
 
+# Maak eerst een lokale ".env" in de project-root op basis van ".env.example" en vul de waarden in.
 ### **Environment Variables**
 ```bash
 # Backend (.env)
 DATABASE_URL=postgresql://crm_user:crm_password@localhost:5432/final_crm
 SECRET_KEY=your-secret-key-here
+JWT_SECRET_KEY=your-jwt-secret-key-here
+FRONTEND_URL=http://localhost:5173
 FLASK_ENV=production
-CORS_ORIGINS=*
 
-# Frontend
+# Frontend (.env)
 VITE_API_URL=http://localhost:5000/api
 ```
 

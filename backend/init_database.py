@@ -1,39 +1,29 @@
 #!/usr/bin/env python3
 """
-Initialize CRM Database
-Run this after first deployment to Railway
+Initialize CRM Database with schema and sample data.
+Run this after first deployment or container start to seed default users.
 """
 
 import os
 import sys
-from pathlib import Path
-
-# Add src to path
-sys.path.insert(0, str(Path(__file__).parent))
-
-from src.models.database import db
-from src.main import app
 from datetime import datetime
 
-def init_database():
-    """Initialize database with schema and sample data"""
-    
+def init_database(app):
+    """Initialize database tables and create sample data if database is empty."""
+    from src.models.database import db, Company, User
+
     with app.app_context():
-        print("🔧 Creating database tables...")
+        print("Creating database tables...")
         db.create_all()
-        print("✅ Database tables created!")
-        
-        # Check if already initialized
-        from src.models.database import Company
+        print("Database tables created!")
+
+        # Skip seeding if data already exists
         if Company.query.first():
-            print("ℹ️  Database already contains data, skipping sample data")
-            return
-        
-        print("\n📊 Creating sample data...")
-        
+            print("Database already contains data, skipping sample data")
+            return False
+
+        print("\nCreating sample data...")
         # Create sample company
-        from src.models.database import Company, User
-        
         sample_company = Company(
             name="Demo Installatiebedrijf B.V.",
             address="Demostraat 123",
@@ -48,46 +38,43 @@ def init_database():
         )
         db.session.add(sample_company)
         db.session.flush()
-        
-        # Create admin user
-        admin_user = User(
-            company_id=sample_company.id,
-            username="admin",
-            email="admin@demo.nl",
-            first_name="Admin",
-            last_name="User",
-            role="admin"
-        )
-        admin_user.set_password("admin123")
-        db.session.add(admin_user)
-        
-        # Create demo user
-        demo_user = User(
-            company_id=sample_company.id,
-            username="demo",
-            email="demo@demo.nl",
-            first_name="Demo",
-            last_name="User",
-            role="technician"
-        )
-        demo_user.set_password("demo123")
-        db.session.add(demo_user)
-        
+
+        # Create sample users matching README
+        users_data = [
+            ("admin@bedrijf.nl", "Admin", "User", "admin", "admin123"),
+            ("manager@bedrijf.nl", "Manager", "User", "manager", "manager123"),
+            ("verkoop@bedrijf.nl", "Sales", "User", "sales", "sales123"),
+            ("techniek@bedrijf.nl", "Technician", "User", "technician", "tech123"),
+            ("financieel@bedrijf.nl", "Financial", "User", "financial", "finance123"),
+        ]
+        for email, first, last, role, pwd in users_data:
+            user = User(
+                company_id=sample_company.id,
+                username=email.split('@')[0],
+                email=email,
+                first_name=first,
+                last_name=last,
+                role=role,
+            )
+            user.set_password(pwd)
+            db.session.add(user)
         db.session.commit()
-        
-        print("✅ Sample data created!")
-        print("\n📝 Login credentials:")
-        print("   Admin: admin@demo.nl / admin123")
-        print("   Demo:  demo@demo.nl / demo123")
-        
+
+        print("Sample data created!\n")
+        print("Login credentials:")
+        for email, first, last, role, pwd in users_data:
+            print(f"   {role.title()}: {email} / {pwd}")
         return True
 
 if __name__ == "__main__":
+    # Standalone execution: create app and seed data
+    from src.main import create_app
     try:
-        if init_database():
-            print("\n🎉 Database initialization completed successfully!")
+        app = create_app()
+        if init_database(app):
+            print("\nDatabase initialization completed successfully!")
         else:
-            print("\n⚠️  Database was already initialized")
+            print("\nDatabase was already initialized")
     except Exception as e:
-        print(f"\n❌ Error during initialization: {str(e)}")
+        print(f"\nError during initialization: {e}")
         sys.exit(1)

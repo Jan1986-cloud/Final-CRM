@@ -13,21 +13,21 @@ export function useAuth() {
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
+  const [token, setToken] = useState(localStorage.getItem('token'))
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     // Check if user is logged in on app start
-    const token = localStorage.getItem('token')
-    if (token) {
-      // Verify token and get user info
+    const storedToken = localStorage.getItem('token')
+    if (storedToken) {
       api
         .get('/auth/me')
         .then((response) => {
           setUser(response.data.user)
         })
         .catch(() => {
-          // Token is invalid, remove it
           localStorage.removeItem('token')
+          setToken(null)
         })
         .finally(() => {
           setLoading(false)
@@ -43,6 +43,7 @@ export function AuthProvider({ children }) {
       const { token, user: userData } = response.data
 
       localStorage.setItem('token', token)
+      setToken(token)
       setUser(userData)
 
       return { success: true }
@@ -73,6 +74,7 @@ export function AuthProvider({ children }) {
 
   const logout = () => {
     localStorage.removeItem('token')
+    setToken(null)
     setUser(null)
   }
 
@@ -98,6 +100,7 @@ export function AuthProvider({ children }) {
 
   const value = {
     user,
+    token,
     loading,
     login,
     register,

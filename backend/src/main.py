@@ -1,18 +1,18 @@
 import os
 import sys
 from datetime import timedelta
-# DON'T CHANGE THIS !!!
+
+# Ensure 'backend' directory is on the import path so 'src' is resolvable
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+
+# Load environment variables from .env (search parent directories)
+from dotenv import load_dotenv, find_dotenv
+load_dotenv(find_dotenv())
 
 from flask import Flask, send_from_directory, jsonify
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
-from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
-
-# Import models and routes
 from src.models.database import db
 from src.routes.auth import auth_bp
 from src.routes.companies import companies_bp
@@ -24,81 +24,91 @@ from src.routes.invoices import invoices_bp
 from src.routes.documents import documents_bp
 from src.routes.excel import excel_bp
 
-# Enforce required environment variables
-SECRET_KEY = os.getenv('SECRET_KEY')
-JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY')
-FRONTEND_URL = os.getenv('FRONTEND_URL')
 
-if not all([SECRET_KEY, JWT_SECRET_KEY, FRONTEND_URL]):
-    raise ValueError("Missing critical environment variables: SECRET_KEY, JWT_SECRET_KEY, or FRONTEND_URL")
+def create_app():
+    """Application factory for the Final CRM API."""
+    # Enforce critical environment variables
+    secret_key = os.getenv('SECRET_KEY')
+    jwt_secret_key = os.getenv('JWT_SECRET_KEY')
+    frontend_url = os.getenv('FRONTEND_URL')
+    if not all([secret_key, jwt_secret_key, frontend_url]):
+        raise ValueError(
+            'Missing critical environment variables: SECRET_KEY, JWT_SECRET_KEY, or FRONTEND_URL'
+        )
 
-app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), 'static'))
+    app = Flask(
+        __name__, static_folder=os.path.join(os.path.dirname(__file__), 'static')
+    )
+    app.config['SECRET_KEY'] = secret_key
+    app.config['JWT_SECRET_KEY'] = jwt_secret_key
+    app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)
 
-# Configuration
-app.config['SECRET_KEY'] = SECRET_KEY
-app.config['JWT_SECRET_KEY'] = JWT_SECRET_KEY
-app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)
-
-# Database configuration
-database_url = os.getenv('DATABASE_URL')
-if database_url:
-    # PostgreSQL for production
-    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
-else:
-    # SQLite for development
-    app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{os.path.join(os.path.dirname(__file__), 'database', 'app.db')}"
-
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-# Initialize extensions
-CORS(app, origins=[FRONTEND_URL])
-jwt = JWTManager(app)
-
-@jwt.unauthorized_loader
-def _jwt_missing_token_callback(reason):
-    return jsonify({'error': reason}), 401
-
-@jwt.invalid_token_loader
-def _jwt_invalid_token_callback(reason):
-    return jsonify({'error': reason}), 401
-db.init_app(app)
-
-# Register blueprints
-app.register_blueprint(auth_bp, url_prefix='/api/auth')
-app.register_blueprint(companies_bp, url_prefix='/api/companies')
-app.register_blueprint(customers_bp, url_prefix='/api/customers')
-app.register_blueprint(articles_bp, url_prefix='/api/articles')
-app.register_blueprint(quotes_bp, url_prefix='/api/quotes')
-app.register_blueprint(work_orders_bp, url_prefix='/api/work-orders')
-app.register_blueprint(invoices_bp, url_prefix='/api/invoices')
-app.register_blueprint(documents_bp, url_prefix='/api/documents')
-app.register_blueprint(excel_bp, url_prefix='/api/excel')
-
-# Create database tables
-with app.app_context():
-    db.create_all()
-
-# Health check endpoint
-@app.route('/health')
-def health_check():
-    return {'status': 'healthy', 'service': 'Final CRM API'}, 200
-
-# Serve frontend
-@app.route('/', defaults={'path': ''})
-@app.route('/<path:path>')
-def serve(path):
-    static_folder_path = app.static_folder
-    if static_folder_path is None:
-        return "Static folder not configured", 404
-
-    if path != "" and os.path.exists(os.path.join(static_folder_path, path)):
-        return send_from_directory(static_folder_path, path)
+    # Database configuration
+    database_url = os.getenv('DATABASE_URL')
+    if database_url:
+        app.config['SQLALCHEMY_DATABASE_URI'] = database_url
     else:
-        index_path = os.path.join(static_folder_path, 'index.html')
-        if os.path.exists(index_path):
-            return send_from_directory(static_folder_path, 'index.html')
-        else:
-            return "Final CRM API is running. Frontend not deployed yet.", 200
+        # SQLite for development; ensure the database folder exists
+        db_folder = os.path.join(os.path.dirname(__file__), 'database')
+        os.makedirs(db_folder, exist_ok=True)
+        db_path = os.path.join(db_folder, 'app.db')
+        app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+    # Initialize extensions
+    CORS(app, origins=[frontend_url])
+    jwt = JWTManager(app)
+
+    @jwt.unauthorized_loader
+    def _jwt_missing_token(reason):
+        return jsonify({'error': reason}), 401
+
+    @jwt.invalid_token_loader
+    def _jwt_invalid_token(reason):
+        return jsonify({'error': reason}), 401
+
+    db.init_app(app)
+
+    # Register API blueprints
+    app.register_blueprint(auth_bp, url_prefix='/api/auth')
+    app.register_blueprint(companies_bp, url_prefix='/api/companies')
+    app.register_blueprint(customers_bp, url_prefix='/api/customers')
+    app.register_blueprint(articles_bp, url_prefix='/api/articles')
+    app.register_blueprint(quotes_bp, url_prefix='/api/quotes')
+    app.register_blueprint(work_orders_bp, url_prefix='/api/work-orders')
+    app.register_blueprint(invoices_bp, url_prefix='/api/invoices')
+    app.register_blueprint(documents_bp, url_prefix='/api/documents')
+    app.register_blueprint(excel_bp, url_prefix='/api/excel')
+
+    # Initialize database tables and seed sample data if needed
+    from init_database import init_database
+    with app.app_context():
+        try:
+            init_database(app)
+        except Exception as e:
+            print(f"Warning: init_database failed: {e}")
+
+    # Health check
+    @app.route('/health')
+    def health_check():
+        return {'status': 'healthy', 'service': 'Final CRM API'}, 200
+
+    # Serve static frontend
+    @app.route('/', defaults={'path': ''})
+    @app.route('/<path:path>')
+    def serve(path):
+        static_folder = app.static_folder
+        if static_folder and os.path.exists(os.path.join(static_folder, path)):
+            return send_from_directory(static_folder, path)
+        index_file = os.path.join(static_folder, 'index.html')
+        if static_folder and os.path.exists(index_file):
+            return send_from_directory(static_folder, 'index.html')
+        return 'Final CRM API is running. Frontend not deployed yet.', 200
+
+    return app
+
+
+app = create_app()
 
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))
