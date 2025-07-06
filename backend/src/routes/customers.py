@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from src.models.database import db, Customer, Location, User
 from sqlalchemy import or_
 
@@ -26,32 +26,22 @@ def _parse_bool_arg(name, default=False):
         return False
     return default
 
-def get_user_company_id():
-    """Helper function to get current user's company ID"""
-    user_id = get_jwt_identity()
-    user = User.query.get(user_id)
-    return user.company_id if user else None
-
 @customers_bp.route('/', methods=['GET'])
 @jwt_required()
 def get_customers():
     """Get all customers for the company"""
     try:
-        company_id = get_user_company_id()
-        if not company_id:
-            return jsonify({'error': 'User not found'}), 404
-        
         # Parse query parameters
         page = _parse_int_arg('page', 1)
         per_page = _parse_int_arg('per_page', 50, max_value=100)
         search = request.args.get('search', '').strip()
         active_only = _parse_bool_arg('active_only', True)
         
-        # Build query
-        query = Customer.query.filter_by(company_id=company_id)
+        # Build query - ScopedQuery automatically filters by company_id
+        query = Customer.query
         
         if active_only:
-            query = query.filter_by(is_active=True)
+            query = query.filter(Customer.is_active == True)
         
         if search:
             search_filter = or_(
@@ -108,13 +98,8 @@ def get_customers():
 def get_customer(customer_id):
     """Get specific customer with locations"""
     try:
-        company_id = get_user_company_id()
-        if not company_id:
-            return jsonify({'error': 'User not found'}), 404
-        
-        customer = Customer.query.filter_by(
-            id=customer_id, company_id=company_id
-        ).first()
+        # .get() is now automatically scoped by company_id
+        customer = Customer.query.get(customer_id)
         
         if not customer:
             return jsonify({'error': 'Customer not found'}), 404
@@ -161,19 +146,15 @@ def get_customer(customer_id):
 def create_customer():
     """Create new customer"""
     try:
-        company_id = get_user_company_id()
+        claims = get_jwt()
+        company_id = claims.get('company_id')
         user_id = get_jwt_identity()
-        
-        if not company_id:
-            return jsonify({'error': 'User not found'}), 404
         
         data = request.get_json()
         
-        # Validate required fields
-        if not data.get('company_name'):
+        if not data or not data.get('company_name'):
             return jsonify({'error': 'Company name is required'}), 400
         
-        # Create customer
         customer = Customer(
             company_id=company_id,
             company_name=data['company_name'],
@@ -193,9 +174,8 @@ def create_customer():
         )
         
         db.session.add(customer)
-        db.session.flush()  # Get customer ID
+        db.session.flush()
         
-        # Create default location if address provided
         if data.get('address'):
             location = Location(
                 customer_id=customer.id,
@@ -225,48 +205,19 @@ def create_customer():
 def update_customer(customer_id):
     """Update customer"""
     try:
-        company_id = get_user_company_id()
-        if not company_id:
-            return jsonify({'error': 'User not found'}), 404
-        
-        customer = Customer.query.filter_by(
-            id=customer_id, company_id=company_id
-        ).first()
+        customer = Customer.query.get(customer_id)
         
         if not customer:
             return jsonify({'error': 'Customer not found'}), 404
         
         data = request.get_json()
-        
+        if not data:
+            return jsonify({'error': 'Invalid request'}), 400
+
         # Update fields
-        if 'company_name' in data:
-            customer.company_name = data['company_name']
-        if 'contact_person' in data:
-            customer.contact_person = data['contact_person']
-        if 'email' in data:
-            customer.email = data['email']
-        if 'phone' in data:
-            customer.phone = data['phone']
-        if 'mobile' in data:
-            customer.mobile = data['mobile']
-        if 'address' in data:
-            customer.address = data['address']
-        if 'postal_code' in data:
-            customer.postal_code = data['postal_code']
-        if 'city' in data:
-            customer.city = data['city']
-        if 'country' in data:
-            customer.country = data['country']
-        if 'vat_number' in data:
-            customer.vat_number = data['vat_number']
-        if 'payment_terms' in data:
-            customer.payment_terms = data['payment_terms']
-        if 'credit_limit' in data:
-            customer.credit_limit = data['credit_limit']
-        if 'notes' in data:
-            customer.notes = data['notes']
-        if 'is_active' in data:
-            customer.is_active = data['is_active']
+        for field, value in data.items():
+            if hasattr(customer, field) and field not in ['id', 'company_id', 'created_at']:
+                setattr(customer, field, value)
         
         db.session.commit()
         
@@ -281,18 +232,11 @@ def update_customer(customer_id):
 def delete_customer(customer_id):
     """Soft delete customer (set inactive)"""
     try:
-        company_id = get_user_company_id()
-        if not company_id:
-            return jsonify({'error': 'User not found'}), 404
-        
-        customer = Customer.query.filter_by(
-            id=customer_id, company_id=company_id
-        ).first()
+        customer = Customer.query.get(customer_id)
         
         if not customer:
             return jsonify({'error': 'Customer not found'}), 404
         
-        # Soft delete - set inactive
         customer.is_active = False
         db.session.commit()
         
@@ -307,13 +251,7 @@ def delete_customer(customer_id):
 def get_customer_locations(customer_id):
     """Get all locations for a customer"""
     try:
-        company_id = get_user_company_id()
-        if not company_id:
-            return jsonify({'error': 'User not found'}), 404
-        
-        customer = Customer.query.filter_by(
-            id=customer_id, company_id=company_id
-        ).first()
+        customer = Customer.query.get(customer_id)
         
         if not customer:
             return jsonify({'error': 'Customer not found'}), 404
@@ -345,24 +283,18 @@ def get_customer_locations(customer_id):
 def create_customer_location(customer_id):
     """Create new location for customer"""
     try:
-        company_id = get_user_company_id()
-        if not company_id:
-            return jsonify({'error': 'User not found'}), 404
-        
-        customer = Customer.query.filter_by(
-            id=customer_id, company_id=company_id
-        ).first()
+        customer = Customer.query.get(customer_id)
         
         if not customer:
             return jsonify({'error': 'Customer not found'}), 404
         
         data = request.get_json()
         
-        if not data.get('address'):
+        if not data or not data.get('address'):
             return jsonify({'error': 'Address is required'}), 400
         
         location = Location(
-            customer_id=customer_id,
+            customer_id=customer.id,
             name=data.get('name', 'Nieuwe locatie'),
             address=data['address'],
             postal_code=data.get('postal_code'),
@@ -385,4 +317,3 @@ def create_customer_location(customer_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
-

@@ -1,10 +1,11 @@
 from flask_sqlalchemy import SQLAlchemy
+from .scoped_query import ScopedQuery
 from datetime import datetime, date
 import uuid
 from sqlalchemy.dialects.postgresql import UUID
 from werkzeug.security import generate_password_hash, check_password_hash
 
-db = SQLAlchemy()
+db = SQLAlchemy(query_class=ScopedQuery)
 
 class Company(db.Model):
     __tablename__ = 'companies'
