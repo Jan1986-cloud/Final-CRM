@@ -24,11 +24,19 @@ from src.routes.invoices import invoices_bp
 from src.routes.documents import documents_bp
 from src.routes.excel import excel_bp
 
+# Enforce required environment variables
+SECRET_KEY = os.getenv('SECRET_KEY')
+JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY')
+FRONTEND_URL = os.getenv('FRONTEND_URL')
+
+if not all([SECRET_KEY, JWT_SECRET_KEY, FRONTEND_URL]):
+    raise ValueError("Missing critical environment variables: SECRET_KEY, JWT_SECRET_KEY, or FRONTEND_URL")
+
 app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), 'static'))
 
 # Configuration
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'final-crm-secret-key-change-in-production')
-app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'jwt-secret-change-in-production')
+app.config['SECRET_KEY'] = SECRET_KEY
+app.config['JWT_SECRET_KEY'] = JWT_SECRET_KEY
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)
 
 # Database configuration
@@ -43,7 +51,7 @@ else:
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Initialize extensions
-CORS(app, origins="*")
+CORS(app, origins=[FRONTEND_URL])
 jwt = JWTManager(app)
 
 @jwt.unauthorized_loader
@@ -95,4 +103,3 @@ def serve(path):
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
-
