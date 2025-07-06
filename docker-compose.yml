@@ -1,7 +1,6 @@
-version: '3.8'
-
+# De 'version' tag is verouderd en verwijderd voor compatibiliteit.
 services:
-  # Database
+  # Database Service
   postgres:
     image: postgres:15-alpine
     environment:
@@ -10,36 +9,33 @@ services:
       POSTGRES_PASSWORD: crm_password
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./final-crm-database-schema.sql:/docker-entrypoint-initdb.d/init.sql
-    ports:
-      - "5432:5432"
     restart: unless-stopped
 
-  # Backend API
+  # Backend API Service
   backend:
     build: ./backend
-    environment:
-      DATABASE_URL: postgresql://crm_user:crm_password@postgres:5432/final_crm
-      SECRET_KEY: your-secret-key-here-change-in-production
-      FLASK_ENV: production
-      CORS_ORIGINS: "*"
+    # Laad environment-variabelen uit het .env bestand in de project-root
+    env_file:
+      - ./.env
     ports:
       - "5000:5000"
+    # Start de applicatie via Python module-executie om importproblemen op te lossen (geen flask CLI).
+    command: python -m src.main
     depends_on:
       - postgres
     volumes:
       - ./uploads:/app/uploads
     restart: unless-stopped
 
-  # Frontend
+  # Frontend Service
   frontend:
     build: ./frontend
     ports:
-      - "80:80"
+      # Host poort 5173 naar container poort 80 (nginx serveert de statische build)
+      - "5173:80"
     depends_on:
       - backend
     restart: unless-stopped
 
 volumes:
   postgres_data:
-

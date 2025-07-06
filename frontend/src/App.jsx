@@ -18,9 +18,9 @@ import InvoiceForm from './components/invoices/InvoiceForm';
 import Settings from './components/settings/Settings';
 
 function ProtectedRoute() {
-  const { token } = useAuth();
+  const { token } = useAuth()
   if (!token) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" replace />
   }
   return (
     <Layout>
