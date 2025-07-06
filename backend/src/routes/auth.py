@@ -1,7 +1,8 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 import uuid
-from src.models.database import db, User, Company
+from src.models.user import User
+from src.models.database import db, Company
 from datetime import datetime
 
 auth_bp = Blueprint('auth', __name__)
@@ -11,21 +12,22 @@ def register():
     """Register new user and company"""
     try:
         data = request.get_json()
-        
-        # Validate required fields
+        if not data:
+            return jsonify({'error': 'Invalid input'}), 400
+
         required_fields = ['username', 'email', 'password', 'first_name', 'last_name', 'company_name']
-        for field in required_fields:
-            if not data.get(field):
-                return jsonify({'error': f'{field} is required'}), 400
+        if not all(field in data for field in required_fields):
+            return jsonify({'error': 'Missing required fields'}), 400
         
-        # Check if user already exists
+        if len(data['password']) < 6:
+            return jsonify({'error': 'Password must be at least 6 characters'}), 400
+
         if User.query.filter_by(email=data['email']).first():
             return jsonify({'error': 'Email already registered'}), 400
         
         if User.query.filter_by(username=data['username']).first():
             return jsonify({'error': 'Username already taken'}), 400
         
-        # Create company first
         company = Company(
             name=data['company_name'],
             address=data.get('company_address'),
@@ -36,23 +38,21 @@ def register():
             vat_number=data.get('company_vat_number')
         )
         db.session.add(company)
-        db.session.flush()  # Get company ID
-        
-        # Create admin user
+        db.session.flush()
+
         user = User(
             company_id=company.id,
             username=data['username'],
             email=data['email'],
             first_name=data['first_name'],
             last_name=data['last_name'],
-            role='admin'  # First user is always admin
+            role='admin'
         )
         user.set_password(data['password'])
         
         db.session.add(user)
         db.session.commit()
         
-        # Create access token
         token = create_access_token(identity=str(user.id))
         
         return jsonify({
@@ -78,12 +78,13 @@ def login():
     """Login user"""
     try:
         data = request.get_json()
-        
+        if not data:
+            return jsonify({'error': 'Invalid input'}), 400
+
         login_id = data.get('email') or data.get('username')
         if not login_id or not data.get('password'):
             return jsonify({'error': 'Email/username and password required'}), 400
 
-        # Find user by username or email
         user = User.query.filter(
             (User.username == login_id) | (User.email == login_id)
         ).first()
@@ -91,14 +92,13 @@ def login():
         if not user or not user.check_password(data['password']):
             return jsonify({'error': 'Invalid credentials'}), 401
         
-        if not user.is_active:
+        if not getattr(user, 'is_active', True):
             return jsonify({'error': 'Account is deactivated'}), 401
         
-        # Update last login
-        user.last_login = datetime.utcnow()
+        if hasattr(user, 'last_login'):
+            user.last_login = datetime.utcnow()
         db.session.commit()
         
-        # Create access token
         token = create_access_token(identity=str(user.id))
         
         return jsonify({
@@ -142,7 +142,7 @@ def get_current_user():
                 'role': user.role,
                 'company_id': user.company_id,
                 'company_name': user.company.name,
-                'last_login': user.last_login.isoformat() if user.last_login else None
+                'last_login': user.last_login.isoformat() if hasattr(user, 'last_login') and user.last_login else None
             }
         }), 200
         
@@ -161,6 +161,8 @@ def change_password():
             return jsonify({'error': 'User not found'}), 404
         
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Invalid input'}), 400
         
         if not data.get('current_password') or not data.get('new_password'):
             return jsonify({'error': 'Current password and new password required'}), 400
@@ -179,4 +181,3 @@ def change_password():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
-
