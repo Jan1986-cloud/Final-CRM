@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from src.models.database import db, Article, ArticleCategory, User
 from sqlalchemy import or_
 
@@ -26,37 +26,27 @@ def _parse_bool_arg(name, default=False):
         return False
     return default
 
-def get_user_company_id():
-    """Helper function to get current user's company ID"""
-    user_id = get_jwt_identity()
-    user = User.query.get(user_id)
-    return user.company_id if user else None
-
 @articles_bp.route('/', methods=['GET'])
 @jwt_required()
 def get_articles():
     """Get all articles for the company"""
     try:
-        company_id = get_user_company_id()
-        if not company_id:
-            return jsonify({'error': 'User not found'}), 404
-        
         # Parse query parameters
         page = _parse_int_arg('page', 1)
         per_page = _parse_int_arg('per_page', 50, max_value=100)
         search = request.args.get('search', '').strip()
-        category_id = _parse_int_arg('category_id', None)
+        category_id = request.args.get('category_id') # Keep as string for UUID
         active_only = _parse_bool_arg('active_only', True)
         low_stock = _parse_bool_arg('low_stock', False)
         
-        # Build query
-        query = Article.query.filter_by(company_id=company_id)
+        # Build query - ScopedQuery automatically filters by company_id
+        query = Article.query
         
         if active_only:
-            query = query.filter_by(is_active=True)
+            query = query.filter(Article.is_active == True)
         
         if category_id:
-            query = query.filter_by(category_id=category_id)
+            query = query.filter(Article.category_id == category_id)
         
         if low_stock:
             query = query.filter(Article.stock_quantity <= Article.min_stock_level)
@@ -70,10 +60,8 @@ def get_articles():
             )
             query = query.filter(search_filter)
         
-        # Order by code
         query = query.order_by(Article.code)
         
-        # Paginate
         articles = query.paginate(
             page=page, per_page=per_page, error_out=False
         )
@@ -115,13 +103,7 @@ def get_articles():
 def get_article(article_id):
     """Get specific article"""
     try:
-        company_id = get_user_company_id()
-        if not company_id:
-            return jsonify({'error': 'User not found'}), 404
-        
-        article = Article.query.filter_by(
-            id=article_id, company_id=company_id
-        ).first()
+        article = Article.query.get(article_id)
         
         if not article:
             return jsonify({'error': 'Article not found'}), 404
@@ -155,29 +137,19 @@ def get_article(article_id):
 def create_article():
     """Create new article"""
     try:
-        company_id = get_user_company_id()
+        claims = get_jwt()
+        company_id = claims.get('company_id')
         user_id = get_jwt_identity()
-        
-        if not company_id:
-            return jsonify({'error': 'User not found'}), 404
         
         data = request.get_json()
         
-        # Validate required fields
         required_fields = ['code', 'name', 'selling_price']
-        for field in required_fields:
-            if not data.get(field):
-                return jsonify({'error': f'{field} is required'}), 400
+        if not data or not all(field in data for field in required_fields):
+            return jsonify({'error': 'Missing required fields'}), 400
         
-        # Check if code already exists
-        existing = Article.query.filter_by(
-            company_id=company_id, code=data['code']
-        ).first()
-        
-        if existing:
+        if Article.query.filter_by(code=data['code']).first():
             return jsonify({'error': 'Article code already exists'}), 400
         
-        # Create article
         article = Article(
             company_id=company_id,
             category_id=data.get('category_id'),
@@ -212,28 +184,19 @@ def create_article():
 def update_article(article_id):
     """Update article"""
     try:
-        company_id = get_user_company_id()
-        if not company_id:
-            return jsonify({'error': 'User not found'}), 404
-        
-        article = Article.query.filter_by(
-            id=article_id, company_id=company_id
-        ).first()
+        article = Article.query.get(article_id)
         
         if not article:
             return jsonify({'error': 'Article not found'}), 404
         
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Invalid request'}), 400
         
-        # Check if code change conflicts
         if 'code' in data and data['code'] != article.code:
-            existing = Article.query.filter_by(
-                company_id=company_id, code=data['code']
-            ).first()
-            if existing:
+            if Article.query.filter_by(code=data['code']).first():
                 return jsonify({'error': 'Article code already exists'}), 400
         
-        # Update fields
         updatable_fields = [
             'category_id', 'code', 'name', 'description', 'unit',
             'purchase_price', 'selling_price', 'vat_rate', 'stock_quantity',
@@ -257,13 +220,7 @@ def update_article(article_id):
 def get_categories():
     """Get all article categories"""
     try:
-        company_id = get_user_company_id()
-        if not company_id:
-            return jsonify({'error': 'User not found'}), 404
-        
-        categories = ArticleCategory.query.filter_by(
-            company_id=company_id
-        ).order_by(ArticleCategory.name).all()
+        categories = ArticleCategory.query.order_by(ArticleCategory.name).all()
         
         return jsonify({
             'categories': [{
@@ -282,13 +239,12 @@ def get_categories():
 def create_category():
     """Create new article category"""
     try:
-        company_id = get_user_company_id()
-        if not company_id:
-            return jsonify({'error': 'User not found'}), 404
+        claims = get_jwt()
+        company_id = claims.get('company_id')
         
         data = request.get_json()
         
-        if not data.get('name'):
+        if not data or not data.get('name'):
             return jsonify({'error': 'Category name is required'}), 400
         
         category = ArticleCategory(
@@ -314,23 +270,16 @@ def create_category():
 def adjust_stock():
     """Adjust article stock quantity"""
     try:
-        company_id = get_user_company_id()
-        if not company_id:
-            return jsonify({'error': 'User not found'}), 404
-        
         data = request.get_json()
         
-        if not data.get('article_id') or 'adjustment' not in data:
+        if not data or not data.get('article_id') or 'adjustment' not in data:
             return jsonify({'error': 'Article ID and adjustment amount required'}), 400
         
-        article = Article.query.filter_by(
-            id=data['article_id'], company_id=company_id
-        ).first()
+        article = Article.query.get(data['article_id'])
         
         if not article:
             return jsonify({'error': 'Article not found'}), 404
         
-        # Apply adjustment
         new_quantity = float(article.stock_quantity) + float(data['adjustment'])
         
         if new_quantity < 0:
@@ -347,4 +296,3 @@ def adjust_stock():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
-
