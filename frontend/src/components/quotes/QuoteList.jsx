@@ -1,157 +1,197 @@
-import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
-import { useToast } from '../../contexts/ToastContext'
-import { quoteService, formatCurrency, formatDate } from '../../services/api'
-import { 
-  FileText, 
-  Plus, 
-  Search, 
-  Edit, 
-  Trash2, 
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { useToast } from "../../contexts/ToastContext";
+import {
+  quoteService,
+  documentService,
+  downloadFile,
+  formatCurrency,
+  formatDate,
+} from "../../services/api";
+import {
+  FileText,
+  Plus,
+  Search,
+  Edit,
+  Trash2,
   Eye,
   Send,
   CheckCircle,
   Clock,
   XCircle,
   MoreVertical,
-  ArrowRight
-} from 'lucide-react'
+  ArrowRight,
+} from "lucide-react";
 
 function QuoteList() {
-  const [quotes, setQuotes] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState('')
+  const [quotes, setQuotes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
   const [pagination, setPagination] = useState({
     page: 1,
     pages: 1,
     per_page: 20,
-    total: 0
-  })
-  const [selectedQuotes, setSelectedQuotes] = useState([])
-  const [showActions, setShowActions] = useState({})
-  
-  const { success, error: showError } = useToast()
+    total: 0,
+  });
+  const [selectedQuotes, setSelectedQuotes] = useState([]);
+  const [showActions, setShowActions] = useState({});
+
+  const { success, error: showError } = useToast();
 
   const statusOptions = [
-    { value: '', label: 'Alle statussen' },
-    { value: 'draft', label: 'Concept' },
-    { value: 'sent', label: 'Verzonden' },
-    { value: 'accepted', label: 'Geaccepteerd' },
-    { value: 'rejected', label: 'Afgewezen' },
-    { value: 'expired', label: 'Verlopen' }
-  ]
+    { value: "", label: "Alle statussen" },
+    { value: "draft", label: "Concept" },
+    { value: "sent", label: "Verzonden" },
+    { value: "accepted", label: "Geaccepteerd" },
+    { value: "rejected", label: "Afgewezen" },
+    { value: "expired", label: "Verlopen" },
+  ];
 
   useEffect(() => {
-    loadQuotes()
-  }, [pagination.page, searchTerm, statusFilter])
+    loadQuotes();
+  }, [pagination.page, searchTerm, statusFilter]);
 
   const loadQuotes = async () => {
     try {
-      setLoading(true)
+      setLoading(true);
       const params = {
         page: pagination.page,
-        per_page: pagination.per_page
-      }
-      
+        per_page: pagination.per_page,
+      };
+
       if (searchTerm) {
-        params.search = searchTerm
+        params.search = searchTerm;
       }
       if (statusFilter) {
-        params.status = statusFilter
+        params.status = statusFilter;
       }
-      
-      const response = await quoteService.getAll(params)
-      setQuotes(response.data.quotes)
-      setPagination(response.data.pagination)
+
+      const response = await quoteService.getAll(params);
+      setQuotes(response.data.quotes);
+      setPagination(response.data.pagination);
     } catch (error) {
-      showError('Fout bij laden van offertes')
-      console.error('Error loading quotes:', error)
+      showError("Fout bij laden van offertes");
+      console.error("Error loading quotes:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleSearch = (e) => {
-    setSearchTerm(e.target.value)
-    setPagination(prev => ({ ...prev, page: 1 }))
-  }
+    setSearchTerm(e.target.value);
+    setPagination((prev) => ({ ...prev, page: 1 }));
+  };
 
   const handleStatusFilter = (e) => {
-    setStatusFilter(e.target.value)
-    setPagination(prev => ({ ...prev, page: 1 }))
-  }
+    setStatusFilter(e.target.value);
+    setPagination((prev) => ({ ...prev, page: 1 }));
+  };
 
   const handleDelete = async (quoteId) => {
-    if (!confirm('Weet je zeker dat je deze offerte wilt verwijderen?')) {
-      return
+    if (!confirm("Weet je zeker dat je deze offerte wilt verwijderen?")) {
+      return;
     }
 
     try {
-      await quoteService.delete(quoteId)
-      success('Offerte succesvol verwijderd')
-      loadQuotes()
+      await quoteService.delete(quoteId);
+      success("Offerte succesvol verwijderd");
+      loadQuotes();
     } catch (error) {
-      showError('Fout bij verwijderen van offerte')
+      showError("Fout bij verwijderen van offerte");
     }
-  }
+  };
 
   const handleConvertToWorkOrder = async (quoteId) => {
-    if (!confirm('Wil je deze offerte omzetten naar een werkbon?')) {
-      return
+    if (!confirm("Wil je deze offerte omzetten naar een werkbon?")) {
+      return;
     }
 
     try {
-      const response = await quoteService.convertToWorkOrder(quoteId)
-      success(`Werkbon ${response.data.work_order_number} aangemaakt`)
-      loadQuotes()
+      const response = await quoteService.convertToWorkOrder(quoteId);
+      success(`Werkbon ${response.data.work_order_number} aangemaakt`);
+      loadQuotes();
     } catch (error) {
-      showError('Fout bij omzetten naar werkbon')
+      showError("Fout bij omzetten naar werkbon");
     }
-  }
+  };
+
+  const handleGeneratePdf = async (quoteId) => {
+    try {
+      success("PDF wordt gegenereerd...");
+      const response = await documentService.generate("quote", quoteId);
+      const pdf = await documentService.download(response.data.document_id);
+      downloadFile(pdf.data, `offerte_${quoteId}.pdf`);
+      success("PDF gedownload");
+    } catch (error) {
+      showError("Fout bij genereren van PDF");
+    }
+  };
 
   const toggleQuoteSelection = (quoteId) => {
-    setSelectedQuotes(prev => 
+    setSelectedQuotes((prev) =>
       prev.includes(quoteId)
-        ? prev.filter(id => id !== quoteId)
-        : [...prev, quoteId]
-    )
-  }
+        ? prev.filter((id) => id !== quoteId)
+        : [...prev, quoteId],
+    );
+  };
 
   const toggleAllQuotes = () => {
     if (selectedQuotes.length === quotes.length) {
-      setSelectedQuotes([])
+      setSelectedQuotes([]);
     } else {
-      setSelectedQuotes(quotes.map(q => q.id))
+      setSelectedQuotes(quotes.map((q) => q.id));
     }
-  }
+  };
 
   const toggleActions = (quoteId) => {
-    setShowActions(prev => ({
+    setShowActions((prev) => ({
       ...prev,
-      [quoteId]: !prev[quoteId]
-    }))
-  }
+      [quoteId]: !prev[quoteId],
+    }));
+  };
 
   const getStatusBadge = (status) => {
     const statusConfig = {
-      draft: { color: 'bg-gray-100 text-gray-800', icon: Clock, text: 'Concept' },
-      sent: { color: 'bg-blue-100 text-blue-800', icon: Send, text: 'Verzonden' },
-      accepted: { color: 'bg-green-100 text-green-800', icon: CheckCircle, text: 'Geaccepteerd' },
-      rejected: { color: 'bg-red-100 text-red-800', icon: XCircle, text: 'Afgewezen' },
-      expired: { color: 'bg-yellow-100 text-yellow-800', icon: Clock, text: 'Verlopen' }
-    }
-    
-    const config = statusConfig[status] || statusConfig.draft
-    const Icon = config.icon
-    
+      draft: {
+        color: "bg-gray-100 text-gray-800",
+        icon: Clock,
+        text: "Concept",
+      },
+      sent: {
+        color: "bg-blue-100 text-blue-800",
+        icon: Send,
+        text: "Verzonden",
+      },
+      accepted: {
+        color: "bg-green-100 text-green-800",
+        icon: CheckCircle,
+        text: "Geaccepteerd",
+      },
+      rejected: {
+        color: "bg-red-100 text-red-800",
+        icon: XCircle,
+        text: "Afgewezen",
+      },
+      expired: {
+        color: "bg-yellow-100 text-yellow-800",
+        icon: Clock,
+        text: "Verlopen",
+      },
+    };
+
+    const config = statusConfig[status] || statusConfig.draft;
+    const Icon = config.icon;
+
     return (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.color}`}>
+      <span
+        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.color}`}
+      >
         <Icon className="h-3 w-3 mr-1" />
         {config.text}
       </span>
-    )
-  }
+    );
+  };
 
   if (loading && quotes.length === 0) {
     return (
@@ -159,13 +199,13 @@ function QuoteList() {
         <div className="animate-pulse">
           <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
           <div className="space-y-4">
-            {[1, 2, 3, 4, 5].map(i => (
+            {[1, 2, 3, 4, 5].map((i) => (
               <div key={i} className="h-16 bg-gray-200 rounded"></div>
             ))}
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   if (!loading && quotes.length === 0) {
@@ -180,7 +220,7 @@ function QuoteList() {
           Nieuwe Offerte
         </Link>
       </div>
-    )
+    );
   }
 
   return (
@@ -227,8 +267,10 @@ function QuoteList() {
                 onChange={handleStatusFilter}
                 className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
               >
-                {statusOptions.map(option => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
+                {statusOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
                 ))}
               </select>
             </div>
@@ -243,7 +285,10 @@ function QuoteList() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   <input
                     type="checkbox"
-                    checked={selectedQuotes.length === quotes.length && quotes.length > 0}
+                    checked={
+                      selectedQuotes.length === quotes.length &&
+                      quotes.length > 0
+                    }
                     onChange={toggleAllQuotes}
                     className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
@@ -291,14 +336,18 @@ function QuoteList() {
                           {quote.quote_number}
                         </div>
                         <div className="text-sm text-gray-500">
-                          {quote.title || 'Offerte'}
+                          {quote.title || "Offerte"}
                         </div>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{quote.customer?.name}</div>
-                    <div className="text-sm text-gray-500">{quote.customer?.contact_person}</div>
+                    <div className="text-sm text-gray-900">
+                      {quote.customer?.name}
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      {quote.customer?.contact_person}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">
@@ -329,7 +378,7 @@ function QuoteList() {
                       >
                         <MoreVertical className="h-5 w-5" />
                       </button>
-                      
+
                       {showActions[quote.id] && (
                         <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg z-10 border border-gray-200">
                           <div className="py-1">
@@ -349,11 +398,11 @@ function QuoteList() {
                               <Edit className="h-4 w-4 mr-2" />
                               Bewerken
                             </Link>
-                            {quote.status === 'accepted' && (
+                            {quote.status === "accepted" && (
                               <button
                                 onClick={() => {
-                                  handleConvertToWorkOrder(quote.id)
-                                  toggleActions(quote.id)
+                                  handleConvertToWorkOrder(quote.id);
+                                  toggleActions(quote.id);
                                 }}
                                 className="flex items-center w-full px-4 py-2 text-sm text-green-700 hover:bg-green-50"
                               >
@@ -371,8 +420,18 @@ function QuoteList() {
                             </Link>
                             <button
                               onClick={() => {
-                                handleDelete(quote.id)
-                                toggleActions(quote.id)
+                                handleGeneratePdf(quote.id);
+                                toggleActions(quote.id);
+                              }}
+                              className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            >
+                              <FileText className="h-4 w-4 mr-2" />
+                              PDF
+                            </button>
+                            <button
+                              onClick={() => {
+                                handleDelete(quote.id);
+                                toggleActions(quote.id);
                               }}
                               className="flex items-center w-full px-4 py-2 text-sm text-red-700 hover:bg-red-50"
                             >
@@ -396,14 +455,18 @@ function QuoteList() {
             <div className="flex items-center justify-between">
               <div className="flex-1 flex justify-between sm:hidden">
                 <button
-                  onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
+                  onClick={() =>
+                    setPagination((prev) => ({ ...prev, page: prev.page - 1 }))
+                  }
                   disabled={pagination.page === 1}
                   className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
                 >
                   Vorige
                 </button>
                 <button
-                  onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
+                  onClick={() =>
+                    setPagination((prev) => ({ ...prev, page: prev.page + 1 }))
+                  }
                   disabled={pagination.page === pagination.pages}
                   className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
                 >
@@ -413,22 +476,30 @@ function QuoteList() {
               <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
                 <div>
                   <p className="text-sm text-gray-700">
-                    Toont{' '}
+                    Toont{" "}
                     <span className="font-medium">
                       {(pagination.page - 1) * pagination.per_page + 1}
-                    </span>{' '}
-                    tot{' '}
+                    </span>{" "}
+                    tot{" "}
                     <span className="font-medium">
-                      {Math.min(pagination.page * pagination.per_page, pagination.total)}
-                    </span>{' '}
-                    van{' '}
-                    <span className="font-medium">{pagination.total}</span> resultaten
+                      {Math.min(
+                        pagination.page * pagination.per_page,
+                        pagination.total,
+                      )}
+                    </span>{" "}
+                    van <span className="font-medium">{pagination.total}</span>{" "}
+                    resultaten
                   </p>
                 </div>
                 <div>
                   <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
                     <button
-                      onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
+                      onClick={() =>
+                        setPagination((prev) => ({
+                          ...prev,
+                          page: prev.page - 1,
+                        }))
+                      }
                       disabled={pagination.page === 1}
                       className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
                     >
@@ -437,18 +508,25 @@ function QuoteList() {
                     {[...Array(pagination.pages)].map((_, i) => (
                       <button
                         key={i + 1}
-                        onClick={() => setPagination(prev => ({ ...prev, page: i + 1 }))}
+                        onClick={() =>
+                          setPagination((prev) => ({ ...prev, page: i + 1 }))
+                        }
                         className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
                           pagination.page === i + 1
-                            ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                            : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                            ? "z-10 bg-blue-50 border-blue-500 text-blue-600"
+                            : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
                         }`}
                       >
                         {i + 1}
                       </button>
                     ))}
                     <button
-                      onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
+                      onClick={() =>
+                        setPagination((prev) => ({
+                          ...prev,
+                          page: prev.page + 1,
+                        }))
+                      }
                       disabled={pagination.page === pagination.pages}
                       className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
                     >
@@ -466,11 +544,13 @@ function QuoteList() {
       {!loading && quotes.length === 0 && (
         <div className="text-center py-12">
           <FileText className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900">Geen offertes gevonden</h3>
+          <h3 className="mt-2 text-sm font-medium text-gray-900">
+            Geen offertes gevonden
+          </h3>
           <p className="mt-1 text-sm text-gray-500">
-            {searchTerm || statusFilter 
-              ? 'Probeer andere filters.' 
-              : 'Begin door je eerste offerte aan te maken.'}
+            {searchTerm || statusFilter
+              ? "Probeer andere filters."
+              : "Begin door je eerste offerte aan te maken."}
           </p>
           {!searchTerm && !statusFilter && (
             <div className="mt-6">
@@ -486,8 +566,7 @@ function QuoteList() {
         </div>
       )}
     </div>
-  )
+  );
 }
 
-export default QuoteList
-
+export default QuoteList;
