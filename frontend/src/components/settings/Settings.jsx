@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useToast } from '../../contexts/ToastContext'
+import { documentService, downloadFile } from '../../services/api'
 import { 
   Settings as SettingsIcon, 
   Building, 
@@ -146,30 +148,8 @@ function Settings() {
 
   const loadTemplates = async () => {
     try {
-      // Mock templates data - in real app this would come from API
-      setTemplates([
-        {
-          id: 1,
-          name: 'Standaard Offerte',
-          type: 'quote',
-          is_default: true,
-          created_at: '2024-01-01T00:00:00Z'
-        },
-        {
-          id: 2,
-          name: 'Installatie Werkbon',
-          type: 'work_order',
-          is_default: true,
-          created_at: '2024-01-01T00:00:00Z'
-        },
-        {
-          id: 3,
-          name: 'Standaard Factuur',
-          type: 'invoice',
-          is_default: true,
-          created_at: '2024-01-01T00:00:00Z'
-        }
-      ])
+      const response = await documentService.getTemplates()
+      setTemplates(response.data.templates)
     } catch (error) {
       showError('Fout bij laden van sjablonen')
     }
@@ -267,6 +247,32 @@ function Settings() {
       showError(`Fout bij importeren van ${type}`)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleEditTemplate = (templateId) => {
+    navigate(`/settings/templates/edit/${templateId}`)
+  }
+
+  const handleDownloadTemplate = async (documentId, name) => {
+    try {
+      const response = await documentService.download(documentId)
+      downloadFile(response.data, `${name || 'template'}_${documentId}.pdf`)
+      success('Sjabloon succesvol gedownload')
+    } catch (error) {
+      showError('Fout bij downloaden van sjabloon')
+    }
+  }
+
+  const handleDeleteTemplate = async (templateId) => {
+    if (!confirm('Weet je zeker dat je dit sjabloon wilt verwijderen?')) return
+
+    try {
+      await documentService.deleteTemplate(templateId)
+      setTemplates(prev => prev.filter(t => t.id !== templateId))
+      success('Sjabloon succesvol verwijderd')
+    } catch (error) {
+      showError('Fout bij verwijderen van sjabloon')
     }
   }
 
@@ -679,6 +685,82 @@ function Settings() {
               </div>
             </div>
           )}
+        </div>
+      )}
+      {/* Templates */}
+      {activeTab === 'templates' && (
+        <div className="space-y-6">
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">Sjablonen</h2>
+              <button
+                onClick={() => setShowTemplateForm(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Nieuwe Sjabloon
+              </button>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Naam
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Type
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Standaard
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Aangemaakt op
+                    </th>
+                    <th className="px-6 py-3"></th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {templates.map((tpl) => (
+                    <tr key={tpl.id}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {tpl.name}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {templateTypes.find(t => t.value === tpl.type)?.label || tpl.type}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {tpl.is_default ? 'Ja' : 'Nee'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {new Date(tpl.created_at).toLocaleDateString('nl-NL')}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                        <button
+                          title="Bewerken"
+                          onClick={() => handleEditTemplate(tpl.id)}
+                        >
+                          <Edit className="h-4 w-4 text-blue-600 hover:text-blue-800" />
+                        </button>
+                        <button
+                          title="Download"
+                          onClick={() => handleDownloadTemplate(tpl.documentId, tpl.name)}
+                        >
+                          <Download className="h-4 w-4 text-green-600 hover:text-green-800" />
+                        </button>
+                        <button
+                          title="Verwijderen"
+                          onClick={() => handleDeleteTemplate(tpl.id)}
+                        >
+                          <Trash2 className="h-4 w-4 text-red-600 hover:text-red-800" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       )}
 

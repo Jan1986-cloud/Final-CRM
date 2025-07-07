@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useToast } from '../../contexts/ToastContext'
-import { invoiceService, customerService, workOrderService, formatCurrency } from '../../services/api'
+import { invoiceService, customerService, workOrderService, articleService, formatCurrency } from '../../services/api'
 import { 
   ArrowLeft, 
   Save, 
@@ -36,17 +36,20 @@ function InvoiceForm() {
   const [invoiceLines, setInvoiceLines] = useState([
     {
       id: Date.now(),
-      description: 'Schilderwerk binnenkant kantoor',
-      quantity: 10,
-      unit_price: 50,
+      article_id: '',
+      description: '',
+      unit: '',
+      quantity: 1,
+      unit_price: 0,
       vat_rate: 21,
-      total: 10 * 50
+      total: 0,
     }
   ])
 
   const [selectedWorkOrders, setSelectedWorkOrders] = useState([])
   const [customers, setCustomers] = useState([])
   const [workOrders, setWorkOrders] = useState([])
+  const [articles, setArticles] = useState([])
   const [loading, setLoading] = useState(false)
   const [initialLoading, setInitialLoading] = useState(isEdit)
 
@@ -61,6 +64,7 @@ function InvoiceForm() {
   useEffect(() => {
     loadCustomers()
     loadWorkOrders()
+    loadArticles()
     if (isEdit) {
       loadInvoice()
     }
@@ -105,6 +109,15 @@ function InvoiceForm() {
       setWorkOrders(response.data.work_orders)
     } catch (error) {
       console.error('Error loading work orders:', error)
+    }
+  }
+
+  const loadArticles = async () => {
+    try {
+      const response = await articleService.getAll({ per_page: 100 })
+      setArticles(response.data.articles)
+    } catch (error) {
+      console.error('Error loading articles:', error)
     }
   }
 
@@ -160,7 +173,17 @@ function InvoiceForm() {
   const handleLineChange = (lineId, field, value) => {
     setInvoiceLines(prev => prev.map(line => {
       if (line.id === lineId) {
-        const updatedLine = { ...line, [field]: value }
+        const updatedLine = { ...line }
+        if (field === 'article_id') {
+          const sel = articles.find(a => a.id === parseInt(value))
+          updatedLine.article_id = parseInt(value)
+          if (sel) {
+            updatedLine.description = sel.name
+            updatedLine.unit_price = sel.selling_price || sel.purchase_price || 0
+          }
+        } else {
+          updatedLine[field] = value
+        }
         updatedLine.total = updatedLine.quantity * updatedLine.unit_price
         return updatedLine
       }
@@ -171,11 +194,13 @@ function InvoiceForm() {
   const addInvoiceLine = () => {
     const newLine = {
       id: Date.now(),
+      article_id: '',
       description: '',
+      unit: '',
       quantity: 1,
       unit_price: 0,
       vat_rate: 21,
-      total: 0
+      total: 0,
     }
     setInvoiceLines(prev => [...prev, newLine])
   }
@@ -340,7 +365,7 @@ function InvoiceForm() {
                     <option value="">Selecteer klant</option>
                     {customers.map(customer => (
                       <option key={customer.id} value={customer.id}>
-                        {customer.name}
+                        {customer.company_name}
                       </option>
                     ))}
                   </select>
@@ -514,8 +539,9 @@ function InvoiceForm() {
                 <table className="min-w-full">
                   <thead>
                     <tr className="border-b border-gray-200">
-                      <th className="text-left py-2 text-sm font-medium text-gray-700">Beschrijving</th>
+                      <th className="text-left py-2 text-sm font-medium text-gray-700">Artikel</th>
                       <th className="text-left py-2 text-sm font-medium text-gray-700 w-20">Aantal</th>
+                      <th className="text-left py-2 text-sm font-medium text-gray-700 w-24">Eenheid</th>
                       <th className="text-left py-2 text-sm font-medium text-gray-700 w-24">Prijs</th>
                       <th className="text-left py-2 text-sm font-medium text-gray-700 w-20">BTW%</th>
                       <th className="text-left py-2 text-sm font-medium text-gray-700 w-24">Totaal</th>
@@ -526,13 +552,18 @@ function InvoiceForm() {
                     {invoiceLines.map((line) => (
                       <tr key={line.id} className="border-b border-gray-100">
                         <td className="py-3">
-                          <input
-                            type="text"
-                            value={line.description}
-                            onChange={(e) => handleLineChange(line.id, 'description', e.target.value)}
+                          <select
+                            value={line.article_id || ''}
+                            onChange={(e) => handleLineChange(line.id, 'article_id', e.target.value)}
                             className="block w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                            placeholder="Beschrijving..."
-                          />
+                          >
+                            <option value="">Selecteer artikel</option>
+                            {articles.map(article => (
+                              <option key={article.id} value={article.id}>
+                                {article.name}
+                              </option>
+                            ))}
+                          </select>
                         </td>
                         <td className="py-3">
                           <input
@@ -542,6 +573,14 @@ function InvoiceForm() {
                             value={line.quantity}
                             onChange={(e) => handleLineChange(line.id, 'quantity', parseFloat(e.target.value) || 0)}
                             className="block w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                          />
+                        </td>
+                        <td className="py-3">
+                          <input
+                            type="text"
+                            value={line.unit || ''}
+                            readOnly
+                            className="block w-full px-2 py-1 text-sm border border-gray-200 bg-gray-100 rounded focus:outline-none"
                           />
                         </td>
                         <td className="py-3">

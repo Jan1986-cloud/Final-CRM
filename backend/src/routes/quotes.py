@@ -18,7 +18,6 @@ def _parse_int_arg(name, default=None, max_value=None):
 
 def generate_quote_number(company_id):
     """Generate next quote number for company"""
-    # Bypass multi-tenant query scoping by using session query directly
     company = db.session.query(Company).get(company_id)
     if not company:
         return None

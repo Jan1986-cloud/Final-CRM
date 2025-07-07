@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useToast } from '../../contexts/ToastContext'
-import { workOrderService, customerService, quoteService } from '../../services/api'
+import { workOrderService, customerService, quoteService, articleService } from '../../services/api'
 import { 
   ArrowLeft, 
   Save, 
@@ -60,6 +60,7 @@ function WorkOrderForm() {
 
   const [customers, setCustomers] = useState([])
   const [quotes, setQuotes] = useState([])
+  const [articles, setArticles] = useState([])
   const [loading, setLoading] = useState(false)
   const [initialLoading, setInitialLoading] = useState(isEdit)
 
@@ -82,6 +83,7 @@ function WorkOrderForm() {
   useEffect(() => {
     loadCustomers()
     loadQuotes()
+    loadArticles()
     if (isEdit) {
       loadWorkOrder()
     }
@@ -110,6 +112,15 @@ function WorkOrderForm() {
       setQuotes(response.data.quotes)
     } catch (error) {
       console.error('Error loading quotes:', error)
+    }
+  }
+
+  const loadArticles = async () => {
+    try {
+      const response = await articleService.getAll({ per_page: 100 })
+      setArticles(response.data.articles)
+    } catch (error) {
+      console.error('Error loading articles:', error)
     }
   }
 
@@ -194,7 +205,18 @@ function WorkOrderForm() {
   const handleMaterialChange = (materialId, field, value) => {
     setMaterials(prev => prev.map(material => {
       if (material.id === materialId) {
-        const updatedMaterial = { ...material, [field]: value }
+        const updatedMaterial = { ...material }
+        if (field === 'article_id') {
+          const sel = articles.find(a => a.id === parseInt(value))
+          updatedMaterial.article_id = parseInt(value)
+          if (sel) {
+            updatedMaterial.description = sel.name
+            updatedMaterial.unit = sel.unit
+            updatedMaterial.unit_price = sel.selling_price || sel.purchase_price || 0
+          }
+        } else {
+          updatedMaterial[field] = value
+        }
         updatedMaterial.total = updatedMaterial.quantity * updatedMaterial.unit_price
         return updatedMaterial
       }
@@ -368,7 +390,7 @@ function WorkOrderForm() {
                     <option value="">Selecteer klant</option>
                     {customers.map(customer => (
                       <option key={customer.id} value={customer.id}>
-                        {customer.name}
+                        {customer.company_name}
                       </option>
                     ))}
                   </select>
@@ -389,7 +411,7 @@ function WorkOrderForm() {
                   <option value="">Geen offerte</option>
                   {quotes.map(quote => (
                     <option key={quote.id} value={quote.id}>
-                      {quote.quote_number} - {quote.customer?.name}
+                      {quote.quote_number} - {quote.customer_name}
                     </option>
                   ))}
                 </select>
@@ -630,7 +652,7 @@ function WorkOrderForm() {
               <table className="min-w-full">
                 <thead>
                   <tr className="border-b border-gray-200">
-                    <th className="text-left py-2 text-sm font-medium text-gray-700">Beschrijving</th>
+                    <th className="text-left py-2 text-sm font-medium text-gray-700">Artikel</th>
                     <th className="text-left py-2 text-sm font-medium text-gray-700 w-20">Aantal</th>
                     <th className="text-left py-2 text-sm font-medium text-gray-700 w-24">Eenheid</th>
                     <th className="text-left py-2 text-sm font-medium text-gray-700 w-24">Prijs</th>
@@ -642,13 +664,18 @@ function WorkOrderForm() {
                   {materials.map((material) => (
                     <tr key={material.id} className="border-b border-gray-100">
                       <td className="py-3">
-                        <input
-                          type="text"
-                          value={material.description}
-                          onChange={(e) => handleMaterialChange(material.id, 'description', e.target.value)}
-                          className="block w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                          placeholder="Materiaal beschrijving..."
-                        />
+                      <select
+                        value={material.article_id || ''}
+                        onChange={(e) => handleMaterialChange(material.id, 'article_id', e.target.value)}
+                        className="block w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Selecteer artikel</option>
+                        {articles.map(article => (
+                          <option key={article.id} value={article.id}>
+                            {article.name}
+                          </option>
+                        ))}
+                      </select>
                       </td>
                       <td className="py-3">
                         <input

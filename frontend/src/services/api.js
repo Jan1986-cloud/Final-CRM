@@ -103,6 +103,7 @@ export const documentService = {
   download: (documentId) =>
     api.get(`/documents/download/${documentId}`, { responseType: "blob" }),
   preview: (templateType) => api.post(`/documents/preview/${templateType}`),
+  deleteTemplate: (templateId) => api.delete(`/documents/templates/${templateId}`),
 };
 
 export const excelService = {

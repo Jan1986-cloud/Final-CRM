@@ -1,6 +1,6 @@
 CRM Consistency Report
 ========================================
-Generated: 2025-07-07T22:38:52.792506
+Generated: 2025-07-07T23:01:12.469289
 
 tables_found: 16
 models_found: 16
