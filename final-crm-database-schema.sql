@@ -206,6 +206,8 @@ CREATE TABLE time_registrations (
     hourly_rate DECIMAL(10,2),
     description TEXT,
     is_billable BOOLEAN DEFAULT true,
+    billable_amount DECIMAL(10,2) DEFAULT 0,
+    vat_rate DECIMAL(5,2) DEFAULT 21.00,
     is_invoiced BOOLEAN DEFAULT false,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
