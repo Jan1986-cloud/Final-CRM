@@ -53,9 +53,9 @@ export const customerService = {
 }
 
 export const articleService = {
-  getAll: (params = {}) => api.get('/articles', { params }),
+  getAll: (params = {}) => api.get('/articles/', { params }),
   getById: (id) => api.get(`/articles/${id}`),
-  create: (data) => api.post('/articles', data),
+  create: (data) => api.post('/articles/', data),
   update: (id, data) => api.put(`/articles/${id}`, data),
   delete: (id) => api.delete(`/articles/${id}`),
   search: (query) => api.get(`/articles/search?q=${query}`),

@@ -51,7 +51,7 @@ function ArticleList() {
         params.search = searchTerm
       }
       if (categoryFilter) {
-        params.category = categoryFilter
+        params.category_id = categoryFilter
       }
       if (stockFilter) {
         // backend expects low_stock boolean flag for low or out of stock filtering

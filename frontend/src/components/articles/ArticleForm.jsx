@@ -11,17 +11,18 @@ function ArticleForm() {
   const isEdit = Boolean(id)
 
   const [formData, setFormData] = useState({
-    article_code: '',
+    code: '',
     name: '',
     description: '',
-    category: '',
+    category_id: '',
     unit: 'stuks',
     purchase_price: '',
     selling_price: '',
     vat_rate: '21',
     stock_quantity: '',
-    minimum_stock: '',
+    min_stock_level: '',
     supplier: '',
+    supplier_code: '',
     is_active: true
   })
   const [loading, setLoading] = useState(false)
@@ -51,7 +52,7 @@ function ArticleForm() {
     const timestamp = Date.now().toString().slice(-6)
     setFormData(prev => ({
       ...prev,
-      article_code: `ART${timestamp}`
+      code: `ART${timestamp}`
     }))
   }
 
@@ -60,12 +61,19 @@ function ArticleForm() {
       setInitialLoading(true)
       const response = await articleService.getById(id)
       setFormData({
-        ...response.data,
+        code: response.data.code,
+        name: response.data.name,
+        description: response.data.description || '',
+        category_id: response.data.category_id || '',
+        unit: response.data.unit,
         purchase_price: response.data.purchase_price?.toString() || '',
         selling_price: response.data.selling_price?.toString() || '',
         vat_rate: response.data.vat_rate?.toString() || '21',
         stock_quantity: response.data.stock_quantity?.toString() || '',
-        minimum_stock: response.data.minimum_stock?.toString() || ''
+        min_stock_level: response.data.min_stock_level?.toString() || '',
+        supplier: response.data.supplier || '',
+        supplier_code: response.data.supplier_code || '',
+        is_active: response.data.is_active
       })
     } catch (error) {
       showError('Fout bij laden van artikelgegevens')
@@ -88,14 +96,21 @@ function ArticleForm() {
     setLoading(true)
 
     try {
-      // Convert string numbers to actual numbers
+      // Prepare payload matching backend fields
       const submitData = {
-        ...formData,
+        code: formData.code,
+        name: formData.name,
+        description: formData.description,
+        category_id: formData.category_id || undefined,
+        unit: formData.unit,
         purchase_price: parseFloat(formData.purchase_price) || 0,
         selling_price: parseFloat(formData.selling_price) || 0,
         vat_rate: parseFloat(formData.vat_rate) || 21,
         stock_quantity: parseInt(formData.stock_quantity) || 0,
-        minimum_stock: parseInt(formData.minimum_stock) || 0
+        min_stock_level: parseInt(formData.min_stock_level) || 0,
+        supplier: formData.supplier || undefined,
+        supplier_code: formData.supplier_code || undefined,
+        is_active: formData.is_active
       }
 
       if (isEdit) {
@@ -189,15 +204,15 @@ function ArticleForm() {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label htmlFor="article_code" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="code" className="block text-sm font-medium text-gray-700 mb-1">
                   Artikelcode *
                 </label>
                 <input
                   type="text"
-                  id="article_code"
-                  name="article_code"
+                  id="code"
+                  name="code"
                   required
-                  value={formData.article_code}
+                  value={formData.code}
                   onChange={handleChange}
                   className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   placeholder="ART001"
@@ -236,13 +251,13 @@ function ArticleForm() {
               </div>
 
               <div>
-                <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="category_id" className="block text-sm font-medium text-gray-700 mb-1">
                   Categorie
                 </label>
                 <select
-                  id="category"
-                  name="category"
-                  value={formData.category}
+                  id="category_id"
+                  name="category_id"
+                  value={formData.category_id}
                   onChange={handleChange}
                   className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 >
@@ -406,15 +421,15 @@ function ArticleForm() {
               </div>
 
               <div>
-                <label htmlFor="minimum_stock" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="min_stock_level" className="block text-sm font-medium text-gray-700 mb-1">
                   Minimum voorraad
                 </label>
                 <input
                   type="number"
-                  id="minimum_stock"
-                  name="minimum_stock"
+                  id="min_stock_level"
+                  name="min_stock_level"
                   min="0"
-                  value={formData.minimum_stock}
+                  value={formData.min_stock_level}
                   onChange={handleChange}
                   className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   placeholder="0"
@@ -426,11 +441,11 @@ function ArticleForm() {
             </div>
 
             {/* Stock Status */}
-            {formData.stock_quantity && formData.minimum_stock && (
+{formData.stock_quantity && formData.min_stock_level && (
               <div className="mt-4 p-4 bg-gray-50 rounded-lg">
                 <h3 className="text-sm font-medium text-gray-900 mb-2">Voorraadstatus</h3>
                 <div className="flex items-center">
-                  {parseInt(formData.stock_quantity) <= parseInt(formData.minimum_stock) ? (
+{parseInt(formData.stock_quantity) <= parseInt(formData.min_stock_level) ? (
                     <div className="flex items-center text-yellow-600">
                       <div className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></div>
                       <span className="text-sm">Lage voorraad - bijbestellen aanbevolen</span>
