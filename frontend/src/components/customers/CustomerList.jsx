@@ -51,8 +51,8 @@ function CustomerList() {
       setCustomers(response.data.customers)
       setPagination(response.data.pagination)
     } catch (error) {
+      console.error('Volledige laadfout:', error)
       showError('Fout bij laden van klanten')
-      console.error('Error loading customers:', error)
     } finally {
       setLoading(false)
     }

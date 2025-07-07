@@ -44,9 +44,9 @@ export const authService = {
 }
 
 export const customerService = {
-  getAll: (params = {}) => api.get('/customers', { params }),
+  getAll: (params = {}) => api.get('/customers/', { params }),
   getById: (id) => api.get(`/customers/${id}`),
-  create: (data) => api.post('/customers', data),
+  create: (data) => api.post('/customers/', data),
   update: (id, data) => api.put(`/customers/${id}`, data),
   delete: (id) => api.delete(`/customers/${id}`),
   search: (query) => api.get(`/customers/search?q=${query}`)

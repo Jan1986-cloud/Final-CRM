@@ -2,15 +2,44 @@ from flask_sqlalchemy import SQLAlchemy
 from .scoped_query import ScopedQuery
 from datetime import datetime, date
 import uuid
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.types import TypeDecorator, CHAR
+import sqlalchemy as sa
 from werkzeug.security import generate_password_hash, check_password_hash
 
 db = SQLAlchemy(query_class=ScopedQuery)
 
+class GUID(TypeDecorator):
+    """Platform-independent GUID type.
+
+    Uses PostgreSQL's UUID type, otherwise CHAR(36).
+    """
+    impl = CHAR
+
+    def load_dialect_impl(self, dialect):
+        if dialect.name == 'postgresql':
+            return dialect.type_descriptor(sa.dialects.postgresql.UUID())
+        else:
+            return dialect.type_descriptor(CHAR(36))
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        if not isinstance(value, uuid.UUID):
+            return str(uuid.UUID(value))
+        return str(value)
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        # Already a UUID instance
+        if isinstance(value, uuid.UUID):
+            return value
+        return uuid.UUID(value)
+
 class Company(db.Model):
     __tablename__ = 'companies'
     
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
     name = db.Column(db.String(255), nullable=False)
     address = db.Column(db.Text)
     postal_code = db.Column(db.String(20))
@@ -39,8 +68,8 @@ class Company(db.Model):
 class User(db.Model):
     __tablename__ = 'users'
     
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id = db.Column(UUID(as_uuid=True), db.ForeignKey('companies.id'), nullable=False)
+    id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    company_id = db.Column(GUID(), db.ForeignKey('companies.id'), nullable=False)
     username = db.Column(db.String(100), unique=True, nullable=False)
     email = db.Column(db.String(255), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
@@ -65,8 +94,8 @@ class User(db.Model):
 class Customer(db.Model):
     __tablename__ = 'customers'
     
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id = db.Column(UUID(as_uuid=True), db.ForeignKey('companies.id'), nullable=False)
+    id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    company_id = db.Column(GUID(), db.ForeignKey('companies.id'), nullable=False)
     company_name = db.Column(db.String(255), nullable=False)
     contact_person = db.Column(db.String(255))
     email = db.Column(db.String(255))
@@ -81,7 +110,7 @@ class Customer(db.Model):
     credit_limit = db.Column(db.Numeric(10,2))
     notes = db.Column(db.Text)
     is_active = db.Column(db.Boolean, default=True)
-    created_by = db.Column(UUID(as_uuid=True), db.ForeignKey('users.id'))
+    created_by = db.Column(GUID(), db.ForeignKey('users.id'))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -94,8 +123,8 @@ class Customer(db.Model):
 class Location(db.Model):
     __tablename__ = 'locations'
     
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    customer_id = db.Column(UUID(as_uuid=True), db.ForeignKey('customers.id'), nullable=False)
+    id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    customer_id = db.Column(GUID(), db.ForeignKey('customers.id'), nullable=False)
     name = db.Column(db.String(255))
     address = db.Column(db.Text, nullable=False)
     postal_code = db.Column(db.String(20))
@@ -112,8 +141,8 @@ class Location(db.Model):
 class ArticleCategory(db.Model):
     __tablename__ = 'article_categories'
     
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id = db.Column(UUID(as_uuid=True), db.ForeignKey('companies.id'), nullable=False)
+    id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    company_id = db.Column(GUID(), db.ForeignKey('companies.id'), nullable=False)
     name = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -124,9 +153,9 @@ class ArticleCategory(db.Model):
 class Article(db.Model):
     __tablename__ = 'articles'
     
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id = db.Column(UUID(as_uuid=True), db.ForeignKey('companies.id'), nullable=False)
-    category_id = db.Column(UUID(as_uuid=True), db.ForeignKey('article_categories.id'))
+    id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    company_id = db.Column(GUID(), db.ForeignKey('companies.id'), nullable=False)
+    category_id = db.Column(GUID(), db.ForeignKey('article_categories.id'))
     code = db.Column(db.String(100), nullable=False)
     name = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text)
@@ -139,7 +168,7 @@ class Article(db.Model):
     supplier = db.Column(db.String(255))
     supplier_code = db.Column(db.String(100))
     is_active = db.Column(db.Boolean, default=True)
-    created_by = db.Column(UUID(as_uuid=True), db.ForeignKey('users.id'))
+    created_by = db.Column(GUID(), db.ForeignKey('users.id'))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -148,11 +177,11 @@ class Article(db.Model):
 class Quote(db.Model):
     __tablename__ = 'quotes'
     
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id = db.Column(UUID(as_uuid=True), db.ForeignKey('companies.id'), nullable=False)
+    id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    company_id = db.Column(GUID(), db.ForeignKey('companies.id'), nullable=False)
     quote_number = db.Column(db.String(50), nullable=False)
-    customer_id = db.Column(UUID(as_uuid=True), db.ForeignKey('customers.id'), nullable=False)
-    location_id = db.Column(UUID(as_uuid=True), db.ForeignKey('locations.id'))
+    customer_id = db.Column(GUID(), db.ForeignKey('customers.id'), nullable=False)
+    location_id = db.Column(GUID(), db.ForeignKey('locations.id'))
     title = db.Column(db.String(255))
     description = db.Column(db.Text)
     quote_date = db.Column(db.Date, default=date.today)
@@ -163,7 +192,7 @@ class Quote(db.Model):
     total_amount = db.Column(db.Numeric(10,2), default=0)
     notes = db.Column(db.Text)
     terms_conditions = db.Column(db.Text)
-    created_by = db.Column(UUID(as_uuid=True), db.ForeignKey('users.id'))
+    created_by = db.Column(GUID(), db.ForeignKey('users.id'))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -176,9 +205,9 @@ class Quote(db.Model):
 class QuoteLine(db.Model):
     __tablename__ = 'quote_lines'
     
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    quote_id = db.Column(UUID(as_uuid=True), db.ForeignKey('quotes.id'), nullable=False)
-    article_id = db.Column(UUID(as_uuid=True), db.ForeignKey('articles.id'))
+    id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    quote_id = db.Column(GUID(), db.ForeignKey('quotes.id'), nullable=False)
+    article_id = db.Column(GUID(), db.ForeignKey('articles.id'))
     description = db.Column(db.Text, nullable=False)
     quantity = db.Column(db.Numeric(10,2), nullable=False)
     unit_price = db.Column(db.Numeric(10,2), nullable=False)
@@ -189,26 +218,26 @@ class QuoteLine(db.Model):
 class WorkOrder(db.Model):
     __tablename__ = 'work_orders'
     
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id = db.Column(UUID(as_uuid=True), db.ForeignKey('companies.id'), nullable=False)
+    id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    company_id = db.Column(GUID(), db.ForeignKey('companies.id'), nullable=False)
     work_order_number = db.Column(db.String(50), nullable=False)
-    quote_id = db.Column(UUID(as_uuid=True), db.ForeignKey('quotes.id'))
-    customer_id = db.Column(UUID(as_uuid=True), db.ForeignKey('customers.id'), nullable=False)
-    location_id = db.Column(UUID(as_uuid=True), db.ForeignKey('locations.id'))
+    quote_id = db.Column(GUID(), db.ForeignKey('quotes.id'))
+    customer_id = db.Column(GUID(), db.ForeignKey('customers.id'), nullable=False)
+    location_id = db.Column(GUID(), db.ForeignKey('locations.id'))
     title = db.Column(db.String(255))
     description = db.Column(db.Text)
     work_date = db.Column(db.Date, default=date.today)
     start_time = db.Column(db.Time)
     end_time = db.Column(db.Time)
     status = db.Column(db.String(50), default='planned')  # planned, in_progress, completed, invoiced
-    technician_id = db.Column(UUID(as_uuid=True), db.ForeignKey('users.id'))
+    technician_id = db.Column(GUID(), db.ForeignKey('users.id'))
     work_performed = db.Column(db.Text)
     customer_signature_url = db.Column(db.Text)
     subtotal = db.Column(db.Numeric(10,2), default=0)
     vat_amount = db.Column(db.Numeric(10,2), default=0)
     total_amount = db.Column(db.Numeric(10,2), default=0)
     notes = db.Column(db.Text)
-    created_by = db.Column(UUID(as_uuid=True), db.ForeignKey('users.id'))
+    created_by = db.Column(GUID(), db.ForeignKey('users.id'))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -223,9 +252,9 @@ class WorkOrder(db.Model):
 class WorkOrderLine(db.Model):
     __tablename__ = 'work_order_lines'
     
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    work_order_id = db.Column(UUID(as_uuid=True), db.ForeignKey('work_orders.id'), nullable=False)
-    article_id = db.Column(UUID(as_uuid=True), db.ForeignKey('articles.id'))
+    id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    work_order_id = db.Column(GUID(), db.ForeignKey('work_orders.id'), nullable=False)
+    article_id = db.Column(GUID(), db.ForeignKey('articles.id'))
     description = db.Column(db.Text, nullable=False)
     quantity = db.Column(db.Numeric(10,2), nullable=False)
     unit_price = db.Column(db.Numeric(10,2), nullable=False)
@@ -236,10 +265,10 @@ class WorkOrderLine(db.Model):
 class WorkOrderTimeEntry(db.Model):
     __tablename__ = 'work_order_time_entries'
 
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id = db.Column(UUID(as_uuid=True), db.ForeignKey('companies.id'), nullable=False)
-    user_id = db.Column(UUID(as_uuid=True), db.ForeignKey('users.id'), nullable=False)
-    work_order_id = db.Column(UUID(as_uuid=True), db.ForeignKey('work_orders.id'), nullable=False)
+    id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    company_id = db.Column(GUID(), db.ForeignKey('companies.id'), nullable=False)
+    user_id = db.Column(GUID(), db.ForeignKey('users.id'), nullable=False)
+    work_order_id = db.Column(GUID(), db.ForeignKey('work_orders.id'), nullable=False)
     date = db.Column(db.Date, default=date.today, nullable=False)
     start_time = db.Column(db.Time)
     end_time = db.Column(db.Time)
@@ -256,10 +285,10 @@ class WorkOrderTimeEntry(db.Model):
 class Invoice(db.Model):
     __tablename__ = 'invoices'
     
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id = db.Column(UUID(as_uuid=True), db.ForeignKey('companies.id'), nullable=False)
+    id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    company_id = db.Column(GUID(), db.ForeignKey('companies.id'), nullable=False)
     invoice_number = db.Column(db.String(50), nullable=False)
-    customer_id = db.Column(UUID(as_uuid=True), db.ForeignKey('customers.id'), nullable=False)
+    customer_id = db.Column(GUID(), db.ForeignKey('customers.id'), nullable=False)
     invoice_type = db.Column(db.String(50), default='standard')  # standard, combined
     invoice_date = db.Column(db.Date, default=date.today)
     due_date = db.Column(db.Date)
@@ -271,7 +300,7 @@ class Invoice(db.Model):
     payment_date = db.Column(db.Date)
     payment_reference = db.Column(db.String(255))
     notes = db.Column(db.Text)
-    created_by = db.Column(UUID(as_uuid=True), db.ForeignKey('users.id'))
+    created_by = db.Column(GUID(), db.ForeignKey('users.id'))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -283,10 +312,10 @@ class Invoice(db.Model):
 class InvoiceItem(db.Model):
     __tablename__ = 'invoice_items'
 
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    invoice_id = db.Column(UUID(as_uuid=True), db.ForeignKey('invoices.id'), nullable=False)
-    work_order_id = db.Column(UUID(as_uuid=True), db.ForeignKey('work_orders.id'))
-    article_id = db.Column(UUID(as_uuid=True), db.ForeignKey('articles.id'))
+    id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    invoice_id = db.Column(GUID(), db.ForeignKey('invoices.id'), nullable=False)
+    work_order_id = db.Column(GUID(), db.ForeignKey('work_orders.id'))
+    article_id = db.Column(GUID(), db.ForeignKey('articles.id'))
     description = db.Column(db.Text, nullable=False)
     quantity = db.Column(db.Numeric(10,2), nullable=False)
     unit_price = db.Column(db.Numeric(10,2), nullable=False)
@@ -301,29 +330,29 @@ class InvoiceItem(db.Model):
 class Attachment(db.Model):
     __tablename__ = 'attachments'
     
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
     entity_type = db.Column(db.String(50), nullable=False)  # work_order, quote, invoice
-    entity_id = db.Column(UUID(as_uuid=True), nullable=False)
+    entity_id = db.Column(GUID(), nullable=False)
     filename = db.Column(db.String(255), nullable=False)
     original_filename = db.Column(db.String(255))
     file_path = db.Column(db.Text, nullable=False)
     file_size = db.Column(db.Integer)
     mime_type = db.Column(db.String(100))
     description = db.Column(db.Text)
-    uploaded_by = db.Column(UUID(as_uuid=True), db.ForeignKey('users.id'))
+    uploaded_by = db.Column(GUID(), db.ForeignKey('users.id'))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class DocumentTemplate(db.Model):
     __tablename__ = 'document_templates'
     
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id = db.Column(UUID(as_uuid=True), db.ForeignKey('companies.id'), nullable=False)
+    id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
+    company_id = db.Column(GUID(), db.ForeignKey('companies.id'), nullable=False)
     name = db.Column(db.String(255), nullable=False)
     document_type = db.Column(db.String(50), nullable=False)  # quote, work_order, invoice, combined_invoice
     google_doc_id = db.Column(db.String(255))
     is_default = db.Column(db.Boolean, default=False)
     is_active = db.Column(db.Boolean, default=True)
-    created_by = db.Column(UUID(as_uuid=True), db.ForeignKey('users.id'))
+    created_by = db.Column(GUID(), db.ForeignKey('users.id'))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

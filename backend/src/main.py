@@ -56,7 +56,13 @@ def create_app():
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     # Initialize extensions
-    CORS(app, origins=[frontend_url])
+    CORS(
+        app,
+        origins=[frontend_url],
+        supports_credentials=True,
+        methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        allow_headers=["Content-Type", "Authorization"]
+    )
     jwt = JWTManager(app)
 
     @jwt.unauthorized_loader
@@ -80,13 +86,38 @@ def create_app():
     app.register_blueprint(documents_bp, url_prefix='/api/documents')
     app.register_blueprint(excel_bp, url_prefix='/api/excel')
 
-    # Initialize database tables and seed sample data if needed
-    from init_database import init_database
+    # Ensure tables exist and seed default company + admin user once
     with app.app_context():
-        try:
-            init_database(app)
-        except Exception as e:
-            print(f"Warning: init_database failed: {e}")
+        db.create_all()
+        # Seed demo data if DB empty
+        from src.models.database import Company, User
+        if not Company.query.first():
+            demo_company = Company(
+                name="Demo Installatiebedrijf B.V.",
+                address="Demostraat 123",
+                postal_code="1234 AB",
+                city="Amsterdam",
+                phone="+31 20 123 4567",
+                email="info@demo-installatie.nl",
+                vat_number="NL123456789B01",
+                invoice_prefix="F",
+                quote_prefix="O",
+                workorder_prefix="W",
+            )
+            db.session.add(demo_company)
+            db.session.flush()
+            admin_user = User(
+                company_id=demo_company.id,
+                username="admin",
+                email="admin@bedrijf.nl",
+                first_name="Admin",
+                last_name="User",
+                role="admin",
+            )
+            admin_user.set_password("admin123")
+            db.session.add(admin_user)
+            db.session.commit()
+            print("Seeded default company and admin user: admin@bedrijf.nl / admin123")
 
     # Health check
     @app.route('/health')
