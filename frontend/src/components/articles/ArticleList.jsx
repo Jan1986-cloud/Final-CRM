@@ -1,169 +1,195 @@
-import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
-import { useToast } from '../../contexts/ToastContext'
-import { articleService, excelService, downloadFile, formatCurrency } from '../../services/api'
-import { 
-  Package, 
-  Plus, 
-  Search, 
-  Edit, 
-  Trash2, 
-  Download, 
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { useToast } from "../../contexts/ToastContext";
+import {
+  articleService,
+  excelService,
+  downloadFile,
+  formatCurrency,
+} from "../../services/api";
+import {
+  Package,
+  Plus,
+  Search,
+  Edit,
+  Trash2,
+  Download,
   Upload,
   AlertTriangle,
   CheckCircle,
   MoreVertical,
   TrendingUp,
-  TrendingDown
-} from 'lucide-react'
+  TrendingDown,
+} from "lucide-react";
 
 function ArticleList() {
-  const [articles, setArticles] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [categoryFilter, setCategoryFilter] = useState('')
-  const [stockFilter, setStockFilter] = useState('')
+  const [articles, setArticles] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [stockFilter, setStockFilter] = useState("");
   const [pagination, setPagination] = useState({
     page: 1,
     pages: 1,
     per_page: 20,
-    total: 0
-  })
-  const [selectedArticles, setSelectedArticles] = useState([])
-  const [showActions, setShowActions] = useState({})
-  const [categories, setCategories] = useState([])
-  
-  const { success, error: showError } = useToast()
+    total: 0,
+  });
+  const [selectedArticles, setSelectedArticles] = useState([]);
+  const [showActions, setShowActions] = useState({});
+  const [categories, setCategories] = useState([]);
+
+  const { success, error: showError } = useToast();
 
   useEffect(() => {
-    loadArticles()
-  }, [pagination.page, searchTerm, categoryFilter, stockFilter])
+    loadArticles();
+  }, [pagination.page, searchTerm, categoryFilter, stockFilter]);
 
   const loadArticles = async () => {
     try {
-      setLoading(true)
+      setLoading(true);
       const params = {
         page: pagination.page,
-        per_page: pagination.per_page
-      }
-      
+        per_page: pagination.per_page,
+      };
+
       if (searchTerm) {
-        params.search = searchTerm
+        params.search = searchTerm;
       }
       if (categoryFilter) {
-        params.category_id = categoryFilter
+        params.category_id = categoryFilter;
       }
       if (stockFilter) {
         // backend expects low_stock boolean flag for low or out of stock filtering
-        if (stockFilter === 'low_stock') {
-          params.low_stock = true
-        } else if (stockFilter === 'out_of_stock') {
-          params.low_stock = false
+        if (stockFilter === "low_stock") {
+          params.low_stock = true;
+        } else if (stockFilter === "out_of_stock") {
+          params.low_stock = false;
         }
       }
-      
-      const response = await articleService.getAll(params)
-      setArticles(response.data.articles)
-      setPagination(response.data.pagination)
-      
+
+      const response = await articleService.getAll(params);
+      setArticles(response.data.articles);
+      setPagination(response.data.pagination);
+
       // Extract unique categories
-      const uniqueCategories = [...new Set(response.data.articles.map(a => a.category).filter(Boolean))]
-      setCategories(uniqueCategories)
+      const uniqueCategories = [
+        ...new Set(
+          response.data.articles.map((a) => a.category).filter(Boolean),
+        ),
+      ];
+      setCategories(uniqueCategories);
     } catch (error) {
-      showError('Fout bij laden van artikelen')
-      console.error('Error loading articles:', error)
+      showError("Fout bij laden van artikelen");
+      console.error("Error loading articles:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleSearch = (e) => {
-    setSearchTerm(e.target.value)
-    setPagination(prev => ({ ...prev, page: 1 }))
-  }
+    setSearchTerm(e.target.value);
+    setPagination((prev) => ({ ...prev, page: 1 }));
+  };
 
   const handleCategoryFilter = (e) => {
-    setCategoryFilter(e.target.value)
-    setPagination(prev => ({ ...prev, page: 1 }))
-  }
+    setCategoryFilter(e.target.value);
+    setPagination((prev) => ({ ...prev, page: 1 }));
+  };
 
   const handleStockFilter = (e) => {
-    setStockFilter(e.target.value)
-    setPagination(prev => ({ ...prev, page: 1 }))
-  }
+    setStockFilter(e.target.value);
+    setPagination((prev) => ({ ...prev, page: 1 }));
+  };
 
   const handleDelete = async (articleId) => {
-    if (!confirm('Weet je zeker dat je dit artikel wilt verwijderen?')) {
-      return
+    if (!confirm("Weet je zeker dat je dit artikel wilt verwijderen?")) {
+      return;
     }
 
     try {
-      await articleService.delete(articleId)
-      success('Artikel succesvol verwijderd')
-      loadArticles()
+      await articleService.delete(articleId);
+      success("Artikel succesvol verwijderd");
+      loadArticles();
     } catch (error) {
-      showError('Fout bij verwijderen van artikel')
+      showError("Fout bij verwijderen van artikel");
     }
-  }
+  };
 
   const handleExport = async () => {
     try {
-      const response = await excelService.exportArticles()
-      downloadFile(response.data, 'artikelen_export.xlsx')
-      success('Artikelen geëxporteerd naar Excel')
+      const response = await excelService.exportArticles();
+      downloadFile(response.data, "artikelen_export.xlsx");
+      success("Artikelen geëxporteerd naar Excel");
     } catch (error) {
-      showError('Fout bij exporteren van artikelen')
+      showError("Fout bij exporteren van artikelen");
     }
-  }
+  };
 
   const handleImport = async (event) => {
-    const file = event.target.files[0]
-    if (!file) return
+    const file = event.target.files[0];
+    if (!file) return;
 
     try {
-      const response = await excelService.importArticles(file)
-      success(`Import voltooid: ${response.data.imported} toegevoegd, ${response.data.updated} bijgewerkt`)
-      loadArticles()
+      const response = await excelService.importArticles(file);
+      success(
+        `Import voltooid: ${response.data.imported} toegevoegd, ${response.data.updated} bijgewerkt`,
+      );
+      loadArticles();
     } catch (error) {
-      showError('Fout bij importeren van artikelen')
+      showError("Fout bij importeren van artikelen");
     }
-    
+
     // Reset file input
-    event.target.value = ''
-  }
+    event.target.value = "";
+  };
 
   const toggleArticleSelection = (articleId) => {
-    setSelectedArticles(prev => 
+    setSelectedArticles((prev) =>
       prev.includes(articleId)
-        ? prev.filter(id => id !== articleId)
-        : [...prev, articleId]
-    )
-  }
+        ? prev.filter((id) => id !== articleId)
+        : [...prev, articleId],
+    );
+  };
 
   const toggleAllArticles = () => {
     if (selectedArticles.length === articles.length) {
-      setSelectedArticles([])
+      setSelectedArticles([]);
     } else {
-      setSelectedArticles(articles.map(a => a.id))
+      setSelectedArticles(articles.map((a) => a.id));
     }
-  }
+  };
 
   const toggleActions = (articleId) => {
-    setShowActions(prev => ({
+    setShowActions((prev) => ({
       ...prev,
-      [articleId]: !prev[articleId]
-    }))
-  }
+      [articleId]: !prev[articleId],
+    }));
+  };
 
   const getStockStatus = (article) => {
     if (article.stock_quantity <= 0) {
-      return { status: 'out_of_stock', color: 'text-red-600', icon: AlertTriangle, text: 'Uitverkocht' }
+      return {
+        status: "out_of_stock",
+        color: "text-red-600",
+        icon: AlertTriangle,
+        text: "Uitverkocht",
+      };
     } else if (article.stock_quantity <= article.minimum_stock) {
-      return { status: 'low_stock', color: 'text-yellow-600', icon: AlertTriangle, text: 'Laag' }
+      return {
+        status: "low_stock",
+        color: "text-yellow-600",
+        icon: AlertTriangle,
+        text: "Laag",
+      };
     } else {
-      return { status: 'in_stock', color: 'text-green-600', icon: CheckCircle, text: 'Op voorraad' }
+      return {
+        status: "in_stock",
+        color: "text-green-600",
+        icon: CheckCircle,
+        text: "Op voorraad",
+      };
     }
-  }
+  };
 
   if (loading && articles.length === 0) {
     return (
@@ -171,13 +197,13 @@ function ArticleList() {
         <div className="animate-pulse">
           <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
           <div className="space-y-4">
-            {[1, 2, 3, 4, 5].map(i => (
+            {[1, 2, 3, 4, 5].map((i) => (
               <div key={i} className="h-16 bg-gray-200 rounded"></div>
             ))}
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   if (!loading && articles.length === 0) {
@@ -192,7 +218,7 @@ function ArticleList() {
           Nieuw Artikel
         </Link>
       </div>
-    )
+    );
   }
 
   return (
@@ -232,18 +258,20 @@ function ArticleList() {
                   className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
-              
+
               <select
                 value={categoryFilter}
                 onChange={handleCategoryFilter}
                 className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="">Alle categorieën</option>
-                {categories.map(category => (
-                  <option key={category} value={category}>{category}</option>
+                {categories.map((category) => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
                 ))}
               </select>
-              
+
               <select
                 value={stockFilter}
                 onChange={handleStockFilter}
@@ -265,7 +293,7 @@ function ArticleList() {
                 <Download className="h-4 w-4 mr-1" />
                 Export
               </button>
-              
+
               <label className="bg-orange-600 hover:bg-orange-700 text-white px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center cursor-pointer">
                 <Upload className="h-4 w-4 mr-1" />
                 Import
@@ -288,7 +316,10 @@ function ArticleList() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   <input
                     type="checkbox"
-                    checked={selectedArticles.length === articles.length && articles.length > 0}
+                    checked={
+                      selectedArticles.length === articles.length &&
+                      articles.length > 0
+                    }
                     onChange={toggleAllArticles}
                     className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
@@ -315,9 +346,9 @@ function ArticleList() {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {articles.map((article) => {
-                const stockStatus = getStockStatus(article)
-                const StatusIcon = stockStatus.icon
-                
+                const stockStatus = getStockStatus(article);
+                const StatusIcon = stockStatus.icon;
+
                 return (
                   <tr key={article.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -340,7 +371,7 @@ function ArticleList() {
                             {article.name}
                           </div>
                           <div className="text-sm text-gray-500">
-                            {article.article_code}
+                            {article.code}
                           </div>
                           {article.description && (
                             <div className="text-xs text-gray-400 mt-1 max-w-xs truncate">
@@ -352,7 +383,7 @@ function ArticleList() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                        {article.category || 'Geen categorie'}
+                        {article.category || "Geen categorie"}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -382,10 +413,14 @@ function ArticleList() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className={`flex items-center ${stockStatus.color}`}>
                         <StatusIcon className="h-4 w-4 mr-1" />
-                        <span className="text-sm font-medium">{stockStatus.text}</span>
+                        <span className="text-sm font-medium">
+                          {stockStatus.text}
+                        </span>
                       </div>
                       {!article.is_active && (
-                        <div className="text-xs text-gray-400 mt-1">Inactief</div>
+                        <div className="text-xs text-gray-400 mt-1">
+                          Inactief
+                        </div>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -396,7 +431,7 @@ function ArticleList() {
                         >
                           <MoreVertical className="h-5 w-5" />
                         </button>
-                        
+
                         {showActions[article.id] && (
                           <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200">
                             <div className="py-1">
@@ -418,8 +453,8 @@ function ArticleList() {
                               </Link>
                               <button
                                 onClick={() => {
-                                  handleDelete(article.id)
-                                  toggleActions(article.id)
+                                  handleDelete(article.id);
+                                  toggleActions(article.id);
                                 }}
                                 className="flex items-center w-full px-4 py-2 text-sm text-red-700 hover:bg-red-50"
                               >
@@ -432,7 +467,7 @@ function ArticleList() {
                       </div>
                     </td>
                   </tr>
-                )
+                );
               })}
             </tbody>
           </table>
@@ -444,14 +479,18 @@ function ArticleList() {
             <div className="flex items-center justify-between">
               <div className="flex-1 flex justify-between sm:hidden">
                 <button
-                  onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
+                  onClick={() =>
+                    setPagination((prev) => ({ ...prev, page: prev.page - 1 }))
+                  }
                   disabled={pagination.page === 1}
                   className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
                 >
                   Vorige
                 </button>
                 <button
-                  onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
+                  onClick={() =>
+                    setPagination((prev) => ({ ...prev, page: prev.page + 1 }))
+                  }
                   disabled={pagination.page === pagination.pages}
                   className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
                 >
@@ -461,22 +500,30 @@ function ArticleList() {
               <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
                 <div>
                   <p className="text-sm text-gray-700">
-                    Toont{' '}
+                    Toont{" "}
                     <span className="font-medium">
                       {(pagination.page - 1) * pagination.per_page + 1}
-                    </span>{' '}
-                    tot{' '}
+                    </span>{" "}
+                    tot{" "}
                     <span className="font-medium">
-                      {Math.min(pagination.page * pagination.per_page, pagination.total)}
-                    </span>{' '}
-                    van{' '}
-                    <span className="font-medium">{pagination.total}</span> resultaten
+                      {Math.min(
+                        pagination.page * pagination.per_page,
+                        pagination.total,
+                      )}
+                    </span>{" "}
+                    van <span className="font-medium">{pagination.total}</span>{" "}
+                    resultaten
                   </p>
                 </div>
                 <div>
                   <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
                     <button
-                      onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
+                      onClick={() =>
+                        setPagination((prev) => ({
+                          ...prev,
+                          page: prev.page - 1,
+                        }))
+                      }
                       disabled={pagination.page === 1}
                       className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
                     >
@@ -485,18 +532,25 @@ function ArticleList() {
                     {[...Array(pagination.pages)].map((_, i) => (
                       <button
                         key={i + 1}
-                        onClick={() => setPagination(prev => ({ ...prev, page: i + 1 }))}
+                        onClick={() =>
+                          setPagination((prev) => ({ ...prev, page: i + 1 }))
+                        }
                         className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
                           pagination.page === i + 1
-                            ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                            : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                            ? "z-10 bg-blue-50 border-blue-500 text-blue-600"
+                            : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
                         }`}
                       >
                         {i + 1}
                       </button>
                     ))}
                     <button
-                      onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
+                      onClick={() =>
+                        setPagination((prev) => ({
+                          ...prev,
+                          page: prev.page + 1,
+                        }))
+                      }
                       disabled={pagination.page === pagination.pages}
                       className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
                     >
@@ -514,11 +568,13 @@ function ArticleList() {
       {!loading && articles.length === 0 && (
         <div className="text-center py-12">
           <Package className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900">Geen artikelen gevonden</h3>
+          <h3 className="mt-2 text-sm font-medium text-gray-900">
+            Geen artikelen gevonden
+          </h3>
           <p className="mt-1 text-sm text-gray-500">
-            {searchTerm || categoryFilter || stockFilter 
-              ? 'Probeer andere filters.' 
-              : 'Begin door je eerste artikel toe te voegen.'}
+            {searchTerm || categoryFilter || stockFilter
+              ? "Probeer andere filters."
+              : "Begin door je eerste artikel toe te voegen."}
           </p>
           {!searchTerm && !categoryFilter && !stockFilter && (
             <div className="mt-6">
@@ -534,8 +590,7 @@ function ArticleList() {
         </div>
       )}
     </div>
-  )
+  );
 }
 
-export default ArticleList
-
+export default ArticleList;
