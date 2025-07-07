@@ -1,13 +1,11 @@
-# CRM Consistency Check Report
+CRM Consistency Report
+========================================
+Generated: 2025-07-07T22:38:52.792506
 
-Total issues found: 4
+tables_found: 16
+models_found: 16
+routes_found: 60
+api_calls_found: 28
+warnings_found: 0
 
-
-## 🟠 Missing Backend Routes
-
-- Frontend calls '/work-orders' but no matching backend route
-- Frontend calls '/work-orders/*' but no matching backend route
-- Frontend calls '/work-orders/*/complete' but no matching backend route
-- Frontend calls '/work-orders/stats' but no matching backend route
-
-## 🛠️ Suggested Fixes
+Total issues: 0

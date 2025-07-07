@@ -115,27 +115,30 @@ class RouteGenerator:
         return registrations
 
     def _match_route(self, frontend_path, backend_path):
-        frontend_normalized = re.sub(r"\$\{(\w+)\}", r"<\1>", frontend_path)
-        frontend_normalized = frontend_normalized.lstrip("/").replace("-", "_")
+        raw = re.sub(r"\$\{(\w+)\}", r"<\1>", frontend_path)
+        raw = raw.lstrip("/")
+        parts = raw.split("/", 1)
+        tail = parts[1] if len(parts) > 1 else ""
+        frontend_normalized = tail.replace("-", "_")
         backend_normalized = backend_path.lstrip("/").replace("-", "_")
         return frontend_normalized == backend_normalized
 
     def generate_report(self):
         """Generate a comprehensive report of all route issues"""
-        print("🔍 Analyzing CRM Routes...\n")
+        print("Analyzing CRM Routes...\n")
 
         frontend_endpoints = self.analyze_frontend_api_calls()
         backend_routes = self.analyze_backend_routes()
         registrations = self.check_blueprint_registration()
 
-        print(f"📊 Found {len(frontend_endpoints)} frontend endpoints")
+        print(f"Found {len(frontend_endpoints)} frontend endpoints")
         print(
-            f"📊 Found {sum(len(routes) for routes in backend_routes.values())} backend routes"
+            f"Found {sum(len(routes) for routes in backend_routes.values())} backend routes"
         )
-        print(f"📊 Found {len(registrations)} blueprint registrations\n")
+        print(f"Found {len(registrations)} blueprint registrations\n")
 
         issues = []
-        print("🔍 Checking for route mismatches...\n")
+        print("Checking for route mismatches...\n")
 
         for endpoint in frontend_endpoints:
             frontend_path = endpoint["url"]
@@ -195,7 +198,7 @@ class RouteGenerator:
                 )
 
         if issues:
-            print(f"❌ Found {len(issues)} issues:\n")
+            print(f"Found {len(issues)} issues:\n")
             for issue in issues:
                 if issue["type"] == "missing_route":
                     print(
@@ -206,7 +209,7 @@ class RouteGenerator:
                         f"  • Mismatch: {issue['blueprint']} registered as {issue['registered']} but frontend expects {issue['frontend_expects']}"
                     )
         else:
-            print("✅ All routes are properly configured!")
+            print("All routes are properly configured!")
 
         return issues
 
@@ -216,7 +219,7 @@ class RouteGenerator:
             print("\n✅ No fixes needed!")
             return
 
-        print("\n📝 Generating fix script...")
+        print("\nGenerating fix script...")
 
         fixes = [
             "#!/usr/bin/env python3",

@@ -18,17 +18,23 @@ def _parse_int_arg(name, default=None, max_value=None):
 
 def generate_quote_number(company_id):
     """Generate next quote number for company"""
-    company = Company.query.unscoped().get(company_id)
+    # Bypass multi-tenant query scoping by using session query directly
+    company = db.session.query(Company).get(company_id)
     if not company:
         return None
     
     year = datetime.now().year
     prefix = f"{company.quote_prefix}{year}-"
     
-    last_quote = Quote.query.unscoped().filter(
-        Quote.company_id == company_id,
-        Quote.quote_number.like(f"{prefix}%")
-    ).order_by(Quote.quote_number.desc()).first()
+    last_quote = (
+        db.session.query(Quote)
+        .filter(
+            Quote.company_id == company_id,
+            Quote.quote_number.like(f"{prefix}%"),
+        )
+        .order_by(Quote.quote_number.desc())
+        .first()
+    )
     
     if last_quote:
         try:

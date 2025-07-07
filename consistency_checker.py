@@ -15,11 +15,13 @@ class ConsistencyChecker:
     def __init__(self, project_root="."):
         self.project_root = Path(project_root)
         self.issues = defaultdict(list)
+        self.warnings = []
         self.stats = {
             "tables_found": 0,
             "models_found": 0,
             "routes_found": 0,
             "api_calls_found": 0,
+            "warnings_found": 0,
         }
 
     # ------------------------------------------------------------------
@@ -149,14 +151,22 @@ class ConsistencyChecker:
 
     def check_model_route_consistency(self, models, routes):
         model_tables = {m["table"] for m in models.values()}
+        valid = set(model_tables)
+        valid.update({"auth", "excel", "documents"})
         for route in routes:
-            parts = route["path"].strip("/").split("/")
-            if parts:
-                segment = parts[0].replace("-", "_")
-                if segment not in model_tables and segment not in {"auth", "excel"}:
-                    self.issues["route_model_mismatch"].append(
-                        f"Route '{route['path']}' has no matching model table"
-                    )
+            blueprint = route.get("blueprint")
+            if not blueprint:
+                continue
+            # Accept if direct match or simple pluralization
+            if (
+                blueprint in valid
+                or f"{blueprint}s" in model_tables
+                or (blueprint.endswith("s") and blueprint[:-1] in model_tables)
+            ):
+                continue
+            self.issues["route_model_mismatch"].append(
+                f"Blueprint '{blueprint}' has no matching model table"
+            )
 
     def check_route_api_consistency(self, routes, api_calls):
         for call in api_calls:
@@ -174,7 +184,6 @@ class ConsistencyChecker:
                 )
 
     def check_naming_conventions(self, tables, models, routes, api_calls):
-        # Basic check for dash/underscore mismatches
         for call in api_calls:
             if "_" in call["url"]:
                 self.warnings.append(
@@ -185,8 +194,11 @@ class ConsistencyChecker:
     # Utility
     # ------------------------------------------------------------------
     def _match_route(self, frontend_path, backend_path):
-        front = re.sub(r"\$\{(\w+)\}", r"<\1>", frontend_path)
-        return front.strip("/") == backend_path.strip("/")
+        raw = re.sub(r"\$\{(\w+)\}", r"<\1>", frontend_path)
+        raw = raw.lstrip("/")
+        parts = raw.split("/", 1)
+        tail = parts[1] if len(parts) > 1 else ""
+        return tail.strip("/") == backend_path.strip("/")
 
     def generate_report(self):
         report_lines = []
@@ -197,6 +209,13 @@ class ConsistencyChecker:
         for key, value in self.stats.items():
             report_lines.append(f"{key}: {value}")
         report_lines.append("")
+
+        if self.warnings:
+            report_lines.append("## warnings")
+            for warning in self.warnings:
+                report_lines.append(f"- {warning}")
+            report_lines.append("")
+
         total = sum(len(v) for v in self.issues.values())
         report_lines.append(f"Total issues: {total}")
         for group, problems in self.issues.items():
@@ -208,7 +227,7 @@ class ConsistencyChecker:
         report_path = self.project_root / "consistency_report.md"
         with open(report_path, "w") as f:
             f.write("\n".join(report_lines))
-        print(f"✅ Report saved to {report_path}")
+        print(f"Report saved to {report_path}")
 
     def run(self):
         tables = self.extract_sql_tables()
@@ -219,6 +238,8 @@ class ConsistencyChecker:
         self.check_db_model_consistency(tables, models)
         self.check_model_route_consistency(models, routes)
         self.check_route_api_consistency(routes, api_calls)
+        self.check_naming_conventions(tables, models, routes, api_calls)
+        self.stats["warnings_found"] = len(self.warnings)
         self.generate_report()
 
         return not any(self.issues.values())

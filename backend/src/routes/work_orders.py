@@ -30,7 +30,7 @@ def _parse_int_arg(name, default=None, max_value=None):
 
 def generate_work_order_number(company_id):
     """Generate next work order number for company"""
-    company = Company.query.unscoped().get(company_id)
+    company = db.session.query(Company).get(company_id)
     if not company:
         return None
 
@@ -38,7 +38,7 @@ def generate_work_order_number(company_id):
     prefix = f"{company.workorder_prefix}{year}-"
 
     last_wo = (
-        WorkOrder.query.unscoped()
+        db.session.query(WorkOrder)
         .filter(
             WorkOrder.company_id == company_id,
             WorkOrder.work_order_number.like(f"{prefix}%"),
