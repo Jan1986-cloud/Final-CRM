@@ -1,238 +1,231 @@
 #!/usr/bin/env python3
 """
-CRM Consistency Checker
-Detecteert naamgevingsinconsistenties tussen database schema, backend models en frontend code
+Enhanced CRM Consistency Checker
+Detecteert alle naamgevingsfouten tussen database, backend en frontend
 """
 
-import re
 import json
-from pathlib import Path
+import re
 from collections import defaultdict
+from datetime import datetime
+from pathlib import Path
+
 
 class ConsistencyChecker:
-    def __init__(self, project_root):
+    def __init__(self, project_root="."):
         self.project_root = Path(project_root)
         self.issues = defaultdict(list)
-        
+        self.stats = {
+            "tables_found": 0,
+            "models_found": 0,
+            "routes_found": 0,
+            "api_calls_found": 0,
+        }
+
+    # ------------------------------------------------------------------
+    # Extraction helpers
+    # ------------------------------------------------------------------
     def extract_sql_tables(self):
-        """Extract table and column names from SQL schema"""
+        """Return tables and columns from SQL schema"""
         schema_file = self.project_root / "final-crm-database-schema.sql"
         tables = {}
-        
-        with open(schema_file, 'r') as f:
+        if not schema_file.exists():
+            self.issues["missing_files"].append("SQL schema file not found")
+            return tables
+
+        with open(schema_file) as f:
             content = f.read()
-            
-        # Find CREATE TABLE statements
-        table_pattern = r'CREATE TABLE (\w+)\s*\((.*?)\);'
-        matches = re.findall(table_pattern, content, re.DOTALL | re.IGNORECASE)
-        
-        for table_name, columns in matches:
+
+        table_pattern = r"CREATE TABLE (\w+)\s*\((.*?)\);"
+        for table_name, columns in re.findall(
+            table_pattern, content, re.DOTALL | re.IGNORECASE
+        ):
             tables[table_name] = []
-            # Extract column names
-            column_pattern = r'^\s*(\w+)\s+\w+'
-            for line in columns.split('\n'):
+            column_pattern = r"^\s*(\w+)\s+\w+"
+            for line in columns.split("\n"):
                 col_match = re.match(column_pattern, line)
-                if col_match and not line.strip().startswith(('PRIMARY', 'FOREIGN', 'CHECK', 'UNIQUE')):
+                if col_match and not line.strip().startswith(
+                    ("PRIMARY", "FOREIGN", "CHECK", "UNIQUE")
+                ):
                     tables[table_name].append(col_match.group(1))
-                    
+
+        self.stats["tables_found"] = len(tables)
         return tables
-    
+
     def extract_model_tables(self):
-        """Extract model table names and fields from SQLAlchemy models"""
         models_file = self.project_root / "backend" / "src" / "models" / "database.py"
         models = {}
-        
-        with open(models_file, 'r') as f:
+        if not models_file.exists():
+            self.issues["missing_files"].append("Models file not found")
+            return models
+
+        with open(models_file) as f:
             content = f.read()
-            
-        # Find model classes and their table names
-        class_pattern = r'class (\w+)\(db\.Model\):(.*?)(?=class|\Z)'
-        matches = re.findall(class_pattern, content, re.DOTALL)
-        
-        for class_name, class_body in matches:
-            # Find tablename
-            tablename_match = re.search(r"__tablename__\s*=\s*['\"](\w+)['\"]", class_body)
-            if tablename_match:
-                table_name = tablename_match.group(1)
-                models[table_name] = {
-                    'class_name': class_name,
-                    'columns': []
-                }
-                
-                # Find column definitions
-                column_pattern = r'(\w+)\s*=\s*db\.Column'
-                for col_match in re.finditer(column_pattern, class_body):
-                    col_name = col_match.group(1)
-                    if col_name not in ['__tablename__', '__table_args__']:
-                        models[table_name]['columns'].append(col_name)
-                        
+
+        class_pattern = r"class (\w+)\(db\.Model\):(.*?)(?=class|$)"
+        for class_name, class_body in re.findall(class_pattern, content, re.DOTALL):
+            table_match = re.search(
+                r"__tablename__\s*=\s*[\"']([^\"']+)[\"']", class_body
+            )
+            if table_match:
+                table_name = table_match.group(1)
+                column_pattern = r"(\w+)\s*=\s*db\.Column"
+                columns = re.findall(column_pattern, class_body)
+                models[class_name] = {"table": table_name, "fields": columns}
+
+        self.stats["models_found"] = len(models)
         return models
-    
-    def extract_api_endpoints(self):
-        """Extract API endpoints from frontend code"""
-        api_file = self.project_root / "frontend" / "src" / "services" / "api.js"
-        endpoints = defaultdict(list)
-        
-        with open(api_file, 'r') as f:
-            content = f.read()
-            
-        # Find API endpoint definitions
-        endpoint_pattern = r"api\.(get|post|put|patch|delete)\(['\"`](/[\w\-/\$\{\}]+)['\"`]"
-        matches = re.findall(endpoint_pattern, content)
-        
-        for method, endpoint in matches:
-            # Clean up endpoint
-            clean_endpoint = re.sub(r'\$\{[^}]+\}', '*', endpoint)
-            endpoints[clean_endpoint].append(method)
-            
-        return endpoints
-    
+
     def extract_backend_routes(self):
-        """Extract route definitions from Flask backend"""
-        routes = defaultdict(list)
         routes_dir = self.project_root / "backend" / "src" / "routes"
-        
+        all_routes = []
+        if not routes_dir.exists():
+            self.issues["missing_files"].append("Routes directory not found")
+            return all_routes
+
         for route_file in routes_dir.glob("*.py"):
             if route_file.name == "__init__.py":
                 continue
-                
-            with open(route_file, 'r') as f:
+            with open(route_file) as f:
                 content = f.read()
-                
-            # Find route decorators
-            route_pattern = r"@\w+\.route\(['\"]([^'\"]+)['\"].*?methods=\[([^\]]+)\]"
-            matches = re.findall(route_pattern, content)
-            
-            for route, methods in matches:
-                # Extract blueprint name
-                bp_match = re.search(r"(\w+)_bp\s*=\s*Blueprint\(['\"](\w+)['\"]", content)
-                if bp_match:
-                    bp_name = bp_match.group(2)
-                    full_route = f"/{bp_name}{route}"
-                    routes[full_route].extend([m.strip().strip("'\"") for m in methods.split(',')])
-                    
-        return routes
-    
-    def check_consistency(self):
-        """Run all consistency checks"""
-        print("🔍 Extracting database schema...")
-        sql_tables = self.extract_sql_tables()
-        
-        print("🔍 Extracting model definitions...")
-        model_tables = self.extract_model_tables()
-        
-        print("🔍 Extracting API endpoints...")
-        api_endpoints = self.extract_api_endpoints()
-        
-        print("🔍 Extracting backend routes...")
-        backend_routes = self.extract_backend_routes()
-        
-        # Check SQL vs Models
-        print("\n📊 Checking SQL schema vs Models...")
-        for sql_table in sql_tables:
-            if sql_table not in model_tables:
-                self.issues['missing_models'].append(f"Table '{sql_table}' has no corresponding model")
-            else:
-                model_cols = set(model_tables[sql_table]['columns'])
-                sql_cols = set(sql_tables[sql_table])
-                
-                missing_in_model = sql_cols - model_cols
-                extra_in_model = model_cols - sql_cols
-                
-                if missing_in_model:
-                    self.issues['missing_columns'].append(
-                        f"Table '{sql_table}': Columns in SQL but not in model: {missing_in_model}"
-                    )
-                if extra_in_model:
-                    self.issues['extra_columns'].append(
-                        f"Table '{sql_table}': Columns in model but not in SQL: {extra_in_model}"
-                    )
-        
-        # Check for table name mismatches
-        for model_table, info in model_tables.items():
-            if model_table not in sql_tables:
-                self.issues['table_mismatch'].append(
-                    f"Model '{info['class_name']}' uses table '{model_table}' which doesn't exist in SQL"
+
+            bp_match = re.search(r"(\w+)\s*=\s*Blueprint\([\"']([^\"']+)[\"']", content)
+            if not bp_match:
+                continue
+            bp_var = bp_match.group(1)
+            bp_name = bp_match.group(2)
+            pattern = rf"@{bp_var}\.route\([\"']([^\"']+)[\"'].*?methods=\[([^\]]+)\]"
+            for path, methods in re.findall(pattern, content):
+                methods_clean = [m.strip().strip("\"'") for m in methods.split(",")]
+                all_routes.append(
+                    {"blueprint": bp_name, "path": path, "methods": methods_clean}
                 )
-        
-        # Check API endpoints vs Backend routes
-        print("\n🌐 Checking Frontend API vs Backend routes...")
-        for endpoint in api_endpoints:
-            # Normalize endpoint for comparison
-            normalized = endpoint.replace('/*', '').replace('/api', '')
+
+        self.stats["routes_found"] = len(all_routes)
+        return all_routes
+
+    def extract_frontend_api_calls(self):
+        api_file = self.project_root / "frontend" / "src" / "services" / "api.js"
+        endpoints = []
+        if not api_file.exists():
+            self.issues["missing_files"].append("api.js not found")
+            return endpoints
+
+        with open(api_file) as f:
+            content = f.read()
+
+        pattern = r"api\.(get|post|put|patch|delete)\([\"'](/[^\"']+)[\"']"
+        for method, url in re.findall(pattern, content):
+            endpoints.append({"method": method.upper(), "url": url})
+
+        self.stats["api_calls_found"] = len(endpoints)
+        return endpoints
+
+    # ------------------------------------------------------------------
+    # Consistency checks
+    # ------------------------------------------------------------------
+    def check_db_model_consistency(self, tables, models):
+        for table_name, columns in tables.items():
             found = False
-            
-            for route in backend_routes:
-                if normalized in route or route in normalized:
+            for model in models.values():
+                if model["table"] == table_name:
+                    found = True
+                    model_cols = set(model["fields"])
+                    sql_cols = set(columns)
+                    missing = sql_cols - model_cols
+                    extra = model_cols - sql_cols
+                    if missing:
+                        self.issues["missing_model_fields"].append(
+                            f"Table '{table_name}': columns missing in model: {sorted(missing)}"
+                        )
+                    if extra:
+                        self.issues["extra_model_fields"].append(
+                            f"Table '{table_name}': extra fields in model: {sorted(extra)}"
+                        )
+            if not found:
+                self.issues["missing_models"].append(
+                    f"Model for table '{table_name}' not found"
+                )
+
+    def check_model_route_consistency(self, models, routes):
+        model_tables = {m["table"] for m in models.values()}
+        for route in routes:
+            parts = route["path"].strip("/").split("/")
+            if parts:
+                segment = parts[0].replace("-", "_")
+                if segment not in model_tables and segment not in {"auth", "excel"}:
+                    self.issues["route_model_mismatch"].append(
+                        f"Route '{route['path']}' has no matching model table"
+                    )
+
+    def check_route_api_consistency(self, routes, api_calls):
+        for call in api_calls:
+            found = False
+            for route in routes:
+                if (
+                    self._match_route(call["url"], route["path"])
+                    and call["method"] in route["methods"]
+                ):
                     found = True
                     break
-                    
             if not found:
-                self.issues['missing_routes'].append(f"Frontend calls '{endpoint}' but no matching backend route")
-        
-        return self.issues
-    
+                self.issues["missing_routes"].append(
+                    f"Frontend calls {call['method']} {call['url']} but no matching route"
+                )
+
+    def check_naming_conventions(self, tables, models, routes, api_calls):
+        # Basic check for dash/underscore mismatches
+        for call in api_calls:
+            if "_" in call["url"]:
+                self.warnings.append(
+                    f"Endpoint {call['url']} uses underscore; consider using dashes"
+                )
+
+    # ------------------------------------------------------------------
+    # Utility
+    # ------------------------------------------------------------------
+    def _match_route(self, frontend_path, backend_path):
+        front = re.sub(r"\$\{(\w+)\}", r"<\1>", frontend_path)
+        return front.strip("/") == backend_path.strip("/")
+
     def generate_report(self):
-        """Generate a detailed report of all issues"""
-        issues = self.check_consistency()
-        
-        report = ["# CRM Consistency Check Report\n"]
-        report.append(f"Total issues found: {sum(len(v) for v in issues.values())}\n")
-        
-        issue_types = {
-            'missing_models': '🔴 Missing Models',
-            'table_mismatch': '🔴 Table Name Mismatches',
-            'missing_columns': '🟡 Missing Columns',
-            'extra_columns': '🟡 Extra Columns',
-            'missing_routes': '🟠 Missing Backend Routes'
-        }
-        
-        for issue_type, title in issue_types.items():
-            if issues[issue_type]:
-                report.append(f"\n## {title}\n")
-                for issue in issues[issue_type]:
-                    report.append(f"- {issue}")
-        
-        # Generate fix suggestions
-        report.append("\n## 🛠️ Suggested Fixes\n")
-        
-        if issues['table_mismatch']:
-            report.append("### Table Name Fixes")
-            report.append("```python")
-            for issue in issues['table_mismatch']:
-                if 'invoice_items' in issue:
-                    report.append("# Change InvoiceItem model:")
-                    report.append("__tablename__ = 'invoice_lines'  # Match SQL schema")
-                elif 'work_order_time_entries' in issue:
-                    report.append("# Change WorkOrderTimeEntry model:")
-                    report.append("__tablename__ = 'time_registrations'  # Match SQL schema")
-            report.append("```\n")
-        
-        return '\n'.join(report)
-    
-    def save_report(self, filename="consistency_report.md"):
-        """Save the report to a file"""
-        report = self.generate_report()
-        report_path = self.project_root / filename
-        
-        with open(report_path, 'w') as f:
-            f.write(report)
-            
-        print(f"\n✅ Report saved to: {report_path}")
-        print("\nSummary:")
-        for issue_type, issues_list in self.issues.items():
-            if issues_list:
-                print(f"  - {issue_type}: {len(issues_list)} issues")
+        report_lines = []
+        report_lines.append("CRM Consistency Report")
+        report_lines.append("=" * 40)
+        report_lines.append(f"Generated: {datetime.now().isoformat()}")
+        report_lines.append("")
+        for key, value in self.stats.items():
+            report_lines.append(f"{key}: {value}")
+        report_lines.append("")
+        total = sum(len(v) for v in self.issues.values())
+        report_lines.append(f"Total issues: {total}")
+        for group, problems in self.issues.items():
+            if problems:
+                report_lines.append(f"\n## {group}")
+                for problem in problems:
+                    report_lines.append(f"- {problem}")
+
+        report_path = self.project_root / "consistency_report.md"
+        with open(report_path, "w") as f:
+            f.write("\n".join(report_lines))
+        print(f"✅ Report saved to {report_path}")
+
+    def run(self):
+        tables = self.extract_sql_tables()
+        models = self.extract_model_tables()
+        routes = self.extract_backend_routes()
+        api_calls = self.extract_frontend_api_calls()
+
+        self.check_db_model_consistency(tables, models)
+        self.check_model_route_consistency(models, routes)
+        self.check_route_api_consistency(routes, api_calls)
+        self.generate_report()
+
+        return not any(self.issues.values())
 
 
 if __name__ == "__main__":
-    # Run consistency check
-    checker = ConsistencyChecker(".")
-    checker.save_report()
-    
-    # Also create a JSON report for programmatic use
-    issues_json = checker.issues
-    with open("consistency_issues.json", "w") as f:
-        json.dump(dict(issues_json), f, indent=2)
-    
-    print("\n📄 JSON report saved to: consistency_issues.json")
+    checker = ConsistencyChecker()
+    success = checker.run()
+    if not success:
+        exit(1)
