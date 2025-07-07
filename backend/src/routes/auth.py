@@ -53,7 +53,7 @@ def register():
         db.session.add(user)
         db.session.commit()
         
-        token = create_access_token(identity=str(user.id))
+        token = create_access_token(identity=str(user.id), additional_claims={'company_id': company.id})
         
         return jsonify({
             'message': 'Registration successful',
@@ -99,7 +99,7 @@ def login():
             user.last_login = datetime.utcnow()
         db.session.commit()
         
-        token = create_access_token(identity=str(user.id))
+        token = create_access_token(identity=str(user.id), additional_claims={'company_id': user.company_id})
         
         return jsonify({
             'message': 'Login successful',
