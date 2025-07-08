@@ -27,20 +27,28 @@ from src.routes.excel import excel_bp
 
 def create_app():
     """Application factory for the Final CRM API."""
-    # Enforce critical environment variables
+    # In a deployed environment (like Google Cloud Run), K_SERVICE is set.
+    # During Firebase's analysis/build phase or local execution, it's often not.
+    is_production_like = os.getenv('K_SERVICE')
+
+    # Enforce critical environment variables in production-like environments
     secret_key = os.getenv('SECRET_KEY')
     jwt_secret_key = os.getenv('JWT_SECRET_KEY')
     frontend_url = os.getenv('FRONTEND_URL')
-    if not all([secret_key, jwt_secret_key, frontend_url]):
+
+    if is_production_like and not all([secret_key, jwt_secret_key, frontend_url]):
         raise ValueError(
-            'Missing critical environment variables: SECRET_KEY, JWT_SECRET_KEY, or FRONTEND_URL'
+            'In a production-like environment, SECRET_KEY, JWT_SECRET_KEY, '
+            'and FRONTEND_URL must be set.'
         )
 
     app = Flask(
         __name__, static_folder=os.path.join(os.path.dirname(__file__), 'static')
     )
-    app.config['SECRET_KEY'] = secret_key
-    app.config['JWT_SECRET_KEY'] = jwt_secret_key
+
+    # Use fallback values for local development or analysis phases
+    app.config['SECRET_KEY'] = secret_key or 'a-default-secret-key-for-dev'
+    app.config['JWT_SECRET_KEY'] = jwt_secret_key or 'a-default-jwt-key-for-dev'
     app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)
 
     # Database configuration
@@ -48,17 +56,19 @@ def create_app():
     if database_url:
         app.config['SQLALCHEMY_DATABASE_URI'] = database_url
     else:
-        # SQLite for development; ensure the database folder exists
+        # Fallback to SQLite for development
         db_folder = os.path.join(os.path.dirname(__file__), 'database')
         os.makedirs(db_folder, exist_ok=True)
         db_path = os.path.join(db_folder, 'app.db')
         app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    db.init_app(app)
 
     # Initialize extensions
     CORS(
         app,
-        origins=[frontend_url],
+        # Use a permissive CORS policy for development if FRONTEND_URL isn't set
+        origins=[frontend_url] if frontend_url else ["http://localhost:5173", "http://127.0.0.1:5173"],
         supports_credentials=True,
         methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["Content-Type", "Authorization"]
@@ -73,8 +83,6 @@ def create_app():
     def _jwt_invalid_token(reason):
         return jsonify({'error': reason}), 401
 
-    db.init_app(app)
-
     # Register API blueprints
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(companies_bp, url_prefix='/api/companies')
@@ -88,36 +96,36 @@ def create_app():
 
     # Ensure tables exist and seed default company + admin user once
     with app.app_context():
-        db.create_all()
         # Seed demo data if DB empty
-        from src.models.database import Company, User
-        if not Company.query.first():
-            demo_company = Company(
-                name="Demo Installatiebedrijf B.V.",
-                address="Demostraat 123",
-                postal_code="1234 AB",
-                city="Amsterdam",
-                phone="+31 20 123 4567",
-                email="info@demo-installatie.nl",
-                vat_number="NL123456789B01",
-                invoice_prefix="F",
-                quote_prefix="O",
-                workorder_prefix="W",
-            )
-            db.session.add(demo_company)
-            db.session.flush()
-            admin_user = User(
-                company_id=demo_company.id,
-                username="admin",
-                email="admin@bedrijf.nl",
-                first_name="Admin",
-                last_name="User",
-                role="admin",
-            )
-            admin_user.set_password("admin123")
-            db.session.add(admin_user)
-            db.session.commit()
-            print("Seeded default company and admin user: admin@bedrijf.nl / admin123")
+        # from src.models.database import Company, User
+        # if not Company.query.first():
+        #     demo_company = Company(
+        #         name="Demo Installatiebedrijf B.V.",
+        #         address="Demostraat 123",
+        #         postal_code="1234 AB",
+        #         city="Amsterdam",
+        #         phone="+31 20 123 4567",
+        #         email="info@demo-installatie.nl",
+        #         vat_number="NL123456789B01",
+        #         invoice_prefix="F",
+        #         quote_prefix="O",
+        #         workorder_prefix="W",
+        #     )
+        #     db.session.add(demo_company)
+        #     db.session.flush()
+        #     admin_user = User(
+        #         company_id=demo_company.id,
+        #         username="admin",
+        #         email="admin@bedrijf.nl",
+        #         first_name="Admin",
+        #         last_name="User",
+        #         role="admin",
+        #     )
+        #     admin_user.set_password("admin123")
+        #     db.session.add(admin_user)
+        #     db.session.commit()
+        #     print("Seeded default company and admin user: admin@bedrijf.nl / admin123")
+        pass
 
     # Health check
     @app.route('/health')
@@ -137,3 +145,10 @@ def create_app():
         return 'Final CRM API is running. Frontend not deployed yet.', 200
 
     return app
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 8080))
+    app = create_app()
+    # app.run(host='0.0.0.0', port=port, debug=True) # Verwijder deze regel
+    # In Cloud Functions, Flask draait via WSGI en de server wordt beheerd door de runtime.
+    # Er is geen app.run() nodig.
