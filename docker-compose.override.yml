@@ -1,0 +1,27 @@
+# Development setup met hot reload
+services:
+  # Backend met hot reload
+  backend:
+    volumes:
+      - ./backend/src:/app/src  # Mount alleen src directory
+      - ./uploads:/app/uploads
+    environment:
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+      - FLASK_APP=src.main:app
+    command: python -m flask run --host=0.0.0.0 --port=5000 --reload
+
+  # Frontend development server (geen nginx)
+  frontend:
+    image: node:18-alpine
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules  # Voorkom dat node_modules overschreven wordt
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:5000/api
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    depends_on:
+      - backend

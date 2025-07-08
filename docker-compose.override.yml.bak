@@ -1,0 +1,25 @@
+# Development overrides voor hot-reloading
+services:
+  backend:
+    # Mount de hele backend directory voor live code changes
+    volumes:
+      - ./backend:/app
+      - ./uploads:/app/uploads
+    # Gebruik Flask development server met auto-reload
+    command: python -m flask run --host=0.0.0.0 --port=5000 --reload
+    environment:
+      - FLASK_APP=src.main:app
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+
+  frontend:
+    # Voor development, gebruik de dev server ipv nginx
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules  # Prevent node_modules from being overwritten
+    ports:
+      - "5174:5173"  # Gebruik port 5174 op host om conflict te vermijden
+    command: npm run dev -- --host 0.0.0.0
