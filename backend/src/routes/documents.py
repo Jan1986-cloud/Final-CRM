@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify, send_file
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from src.models.database import db, User, Customer, Quote, WorkOrder, Invoice, Company
+from src.models.database import db, User, Customer, Quote, WorkOrder, Invoice, Company, DocumentTemplate
 import os
 import json
 import tempfile
@@ -146,6 +146,22 @@ def get_templates():
         return jsonify({"templates": templates}), 200
 
     except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@documents_bp.route("/templates/<template_id>", methods=["DELETE"])
+@jwt_required()
+def delete_template(template_id):
+    """Delete a document template"""
+    try:
+        template = DocumentTemplate.query.get(template_id)
+        if not template:
+            return jsonify({"error": "Template not found"}), 404
+        db.session.delete(template)
+        db.session.commit()
+        return jsonify({"message": f"Template {template_id} deleted"}), 200
+    except Exception as e:
+        db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
 

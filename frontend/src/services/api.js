@@ -106,6 +106,10 @@ export const documentService = {
   deleteTemplate: (templateId) => api.delete(`/documents/templates/${templateId}`),
 };
 
+export const templateService = {
+  deleteTemplate: (templateId) => api.delete(`/documents/templates/${templateId}`),
+};
+
 export const excelService = {
   exportCustomers: () =>
     api.get("/excel/customers/export", { responseType: "blob" }),

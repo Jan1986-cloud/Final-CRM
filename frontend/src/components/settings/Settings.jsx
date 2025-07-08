@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useToast } from '../../contexts/ToastContext'
-import { documentService, downloadFile } from '../../services/api'
+import { documentService, templateService, downloadFile } from '../../services/api'
 import { 
   Settings as SettingsIcon, 
   Building, 
@@ -21,7 +21,7 @@ import {
 function Settings() {
   const { user } = useAuth()
   const { success, error: showError } = useToast()
-  
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('company')
   const [loading, setLoading] = useState(false)
   
@@ -250,6 +250,10 @@ function Settings() {
     }
   }
 
+  const handleNewTemplate = () => {
+    navigate('/settings/templates/new')
+  }
+
   const handleEditTemplate = (templateId) => {
     navigate(`/settings/templates/edit/${templateId}`)
   }
@@ -268,10 +272,12 @@ function Settings() {
     if (!confirm('Weet je zeker dat je dit sjabloon wilt verwijderen?')) return
 
     try {
-      await documentService.deleteTemplate(templateId)
-      setTemplates(prev => prev.filter(t => t.id !== templateId))
+      const response = await templateService.deleteTemplate(templateId)
+      console.log('deleteTemplate response:', response)
+      setTemplates((prev) => prev.filter((t) => t.id !== templateId))
       success('Sjabloon succesvol verwijderd')
     } catch (error) {
+      console.error('deleteTemplate error:', error)
       showError('Fout bij verwijderen van sjabloon')
     }
   }
@@ -694,7 +700,7 @@ function Settings() {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold text-gray-900">Sjablonen</h2>
               <button
-                onClick={() => setShowTemplateForm(true)}
+                onClick={handleNewTemplate}
                 className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center"
               >
                 <Plus className="h-4 w-4 mr-2" />

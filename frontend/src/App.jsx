@@ -16,6 +16,7 @@ import WorkOrderForm from './components/work-orders/WorkOrderForm';
 import InvoiceList from './components/invoices/InvoiceList';
 import InvoiceForm from './components/invoices/InvoiceForm';
 import Settings from './components/settings/Settings';
+import TemplateNew from './components/settings/TemplateNew';
 
 function ProtectedRoute() {
   const { token } = useAuth()
@@ -53,6 +54,7 @@ function AppRoutes() {
         <Route path="/invoices/new" element={<InvoiceForm />} />
         <Route path="/invoices/:id/edit" element={<InvoiceForm />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/settings/templates/new" element={<TemplateNew />} />
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
