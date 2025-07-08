@@ -10,7 +10,7 @@ on:
 
 jobs:
   build_and_deploy:
-    runs-on: ubuntu-20.04 # Use a specific, stable LTS version of Ubuntu
+    runs-on: ubuntu-latest # Revert to the supported OS
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -27,10 +27,9 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11' # Revert to 3.11 to get clear errors
+          python-version: '3.11'
 
-      - name: Force Install Backend Dependencies
-        shell: bash -x {0}
+      - name: Install Backend Dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r functions/requirements.txt -r functions/backend/requirements.txt
