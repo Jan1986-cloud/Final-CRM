@@ -22,3 +22,13 @@ The project is configured for deployment on Railway, after a migration from Goog
 ## Migration Note
 
 The project was previously configured for deployment on Google Cloud (Firebase Hosting and Cloud Functions). Due to persistent and unresolvable build failures in the GitHub Actions environment, the deployment strategy was fundamentally changed to use Railway's container-based platform. All Google Cloud-specific configurations (e.g., `.github/workflows`, `firebase.json`) have been removed.
+
+## Deployment Log
+
+**2025-07-08 21:30:**
+- **Status:** Investigating failed push.
+- **Action:**
+    1. User was instructed to commit and push the `railway.json` fix.
+    2. User encountered a "branch is behind" error and correctly ran `git pull`.
+- **Observation:** User reports that after the pull and subsequent push, no new commit appeared on GitHub, and no Railway deployment was triggered. This indicates the local commit was not successfully pushed to the remote.
+- **Next Step:** Run `git status` to diagnose the synchronization state between the local repository and `origin/main`.
