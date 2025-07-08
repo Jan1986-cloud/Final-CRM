@@ -31,8 +31,8 @@ jobs:
 
       - name: Install Backend Dependencies
         run: |
-          pip install -r functions/requirements.txt
-          pip install -r functions/backend/requirements.txt
+          python -m pip install --upgrade pip
+          pip install -r functions/requirements.txt -r functions/backend/requirements.txt
       
       - name: Deploy to Firebase
         uses: FirebaseExtended/action-hosting-deploy@v0
