@@ -21,7 +21,7 @@ jobs:
           node-version: '18'
 
       - name: Install Frontend Dependencies and Build
-        # This assumes package.json is in the root directory
+        working-directory: ./frontend
         run: npm ci && npm run build
 
       - name: Setup Python
