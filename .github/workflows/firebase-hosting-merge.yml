@@ -27,13 +27,13 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10' # Must match your function's runtime
+          python-version: '3.11' # Revert to 3.11 to get clear errors
 
-      - name: Install Backend Dependencies
+      - name: Force Install Backend Dependencies
+        shell: bash -x {0}
         run: |
           python -m pip install --upgrade pip
-          pip install -r functions/requirements.txt
-          pip install -r functions/backend/requirements.txt
+          pip install -r functions/requirements.txt -r functions/backend/requirements.txt
       
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
