@@ -15,7 +15,6 @@ psycopg2-binary==2.9.9
 
 # Google Cloud dependencies
 google-cloud-logging==3.9.0
-google-cloud-sqlalchemy-connector
 pg8000
 
 # For Excel/data handling
