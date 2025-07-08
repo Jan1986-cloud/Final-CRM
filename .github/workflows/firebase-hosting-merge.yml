@@ -29,6 +29,14 @@ jobs:
         with:
           python-version: '3.11' # Must match your function's runtime
 
+      - name: Debug Pip and Python Environment
+        run: |
+          echo "--- Python and Pip Info ---"
+          python --version
+          pip --version
+          echo "--- Attempting to find package versions from PyPI ---"
+          pip index versions google-cloud-sqlalchemy-connector || echo "Pip index command failed, continuing..."
+
       - name: Install Backend Dependencies
         run: |
           python -m pip install --upgrade pip setuptools wheel
