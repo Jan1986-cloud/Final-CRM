@@ -1,18 +1,36 @@
 import os
 import sys
+import logging
 from datetime import timedelta
 
-# Ensure 'backend' directory is on the import path so 'src' is resolvable
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+# --- Google Cloud Logging Integration ---
+# Do this BEFORE any other imports that might configure logging
+try:
+    import google.cloud.logging
+    client = google.cloud.logging.Client()
+    # Attaches a Google Cloud logging handler to the root logger
+    client.setup_logging()
+    logging.info("Google Cloud Logging initialized successfully.")
+except ImportError:
+    logging.warning("Google Cloud Logging not found. Using standard logging.")
+    logging.basicConfig(level=logging.INFO)
 
-# Load environment variables from .env (search parent directories)
+
+# --- Path and Environment Setup ---
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from dotenv import load_dotenv, find_dotenv
 load_dotenv(find_dotenv())
+logging.info("App environment loaded.")
 
+
+# --- Flask and Extension Imports ---
 from flask import Flask, send_from_directory, jsonify
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
+from sqlalchemy import create_engine
+from sqlalchemy.engine import URL
 
+# --- Local Application Imports ---
 from src.models.database import db
 from src.routes.auth import auth_bp
 from src.routes.companies import companies_bp
@@ -24,66 +42,90 @@ from src.routes.invoices import invoices_bp
 from src.routes.documents import documents_bp
 from src.routes.excel import excel_bp
 
+def get_db_engine(db_user, db_pass, db_name, db_host, cloud_sql_connection_name=None):
+    """Creates a SQLAlchemy engine with the Cloud SQL Python Connector."""
+    if cloud_sql_connection_name:
+        # Production environment (Google Cloud)
+        logging.info(f"Connecting to Cloud SQL instance: {cloud_sql_connection_name}")
+        from google.cloud.sql.connector import Connector
+        
+        connector = Connector()
+        
+        def getconn():
+            conn = connector.connect(
+                cloud_sql_connection_name,
+                "pg8000",
+                user=db_user,
+                password=db_pass,
+                db=db_name,
+                ip_type="public" # or "private"
+            )
+            return conn
+
+        return create_engine("postgresql+pg8000://", getconn)
+    else:
+        # Local development environment
+        logging.info(f"Connecting to local PostgreSQL host: {db_host}")
+        db_uri = URL.create(
+            "postgresql+psycopg2",
+            username=db_user,
+            password=db_pass,
+            host=db_host,
+            database=db_name,
+        )
+        return create_engine(db_uri)
+
 
 def create_app():
     """Application factory for the Final CRM API."""
-    # In a deployed environment (like Google Cloud Run), K_SERVICE is set.
-    # During Firebase's analysis/build phase or local execution, it's often not.
-    is_production_like = os.getenv('K_SERVICE')
+    logging.info("--- Starting Application Factory ---")
+    
+    app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), 'static'))
 
-    # Enforce critical environment variables in production-like environments
-    secret_key = os.getenv('SECRET_KEY')
-    jwt_secret_key = os.getenv('JWT_SECRET_KEY')
-    frontend_url = os.getenv('FRONTEND_URL')
-
-    if is_production_like and not all([secret_key, jwt_secret_key, frontend_url]):
-        raise ValueError(
-            'In a production-like environment, SECRET_KEY, JWT_SECRET_KEY, '
-            'and FRONTEND_URL must be set.'
-        )
-
-    app = Flask(
-        __name__, static_folder=os.path.join(os.path.dirname(__file__), 'static')
-    )
-
-    # Use fallback values for local development or analysis phases
-    app.config['SECRET_KEY'] = secret_key or 'a-default-secret-key-for-dev'
-    app.config['JWT_SECRET_KEY'] = jwt_secret_key or 'a-default-jwt-key-for-dev'
+    # --- Configuration ---
+    logging.info("Loading configuration...")
+    app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'a-default-secret-key-for-dev')
+    app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'a-default-jwt-key-for-dev')
     app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    
+    # --- Database Connection ---
+    db_user = os.getenv("DB_USER")
+    db_pass = os.getenv("DB_PASS")
+    db_name = os.getenv("DB_NAME")
+    db_host = os.getenv("DB_HOST") # For local connection
+    cloud_sql_connection_name = os.getenv("CLOUD_SQL_CONNECTION_NAME")
 
-    # Database configuration
-    database_url = os.getenv('DATABASE_URL')
-    if database_url:
-        app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+    if all([db_user, db_pass, db_name]) and (db_host or cloud_sql_connection_name):
+        logging.info("Database credentials found, attempting to configure SQLAlchemy.")
+        try:
+            engine = get_db_engine(db_user, db_pass, db_name, db_host, cloud_sql_connection_name)
+            app.config['SQLALCHEMY_DATABASE_URI'] = engine.url
+            logging.info("SQLAlchemy engine created successfully.")
+        except Exception as e:
+            logging.critical(f"Failed to create SQLAlchemy engine: {e}", exc_info=True)
+            raise
     else:
-        # Fallback to SQLite for development
+        logging.warning("Database environment variables not fully set. Falling back to SQLite.")
         db_folder = os.path.join(os.path.dirname(__file__), 'database')
         os.makedirs(db_folder, exist_ok=True)
         db_path = os.path.join(db_folder, 'app.db')
         app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    db.init_app(app)
 
-    # Initialize extensions
+    db.init_app(app)
+    logging.info("Database initialized with Flask app.")
+
+    # --- CORS and JWT Initialization ---
+    frontend_url = os.getenv('FRONTEND_URL', "http://localhost:5173")
     CORS(
         app,
-        # Use a permissive CORS policy for development if FRONTEND_URL isn't set
-        origins=[frontend_url] if frontend_url else ["http://localhost:5173", "http://127.0.0.1:5173"],
-        supports_credentials=True,
-        methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-        allow_headers=["Content-Type", "Authorization"]
+        origins=[frontend_url, "http://127.0.0.1:5173"],
+        supports_credentials=True
     )
     jwt = JWTManager(app)
+    logging.info("CORS and JWT initialized.")
 
-    @jwt.unauthorized_loader
-    def _jwt_missing_token(reason):
-        return jsonify({'error': reason}), 401
-
-    @jwt.invalid_token_loader
-    def _jwt_invalid_token(reason):
-        return jsonify({'error': reason}), 401
-
-    # Register API blueprints
+    # --- Register Blueprints ---
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(companies_bp, url_prefix='/api/companies')
     app.register_blueprint(customers_bp, url_prefix='/api/customers')
@@ -93,62 +135,26 @@ def create_app():
     app.register_blueprint(invoices_bp, url_prefix='/api/invoices')
     app.register_blueprint(documents_bp, url_prefix='/api/documents')
     app.register_blueprint(excel_bp, url_prefix='/api/excel')
+    logging.info("All API blueprints registered.")
 
-    # Ensure tables exist and seed default company + admin user once
-    with app.app_context():
-        # Seed demo data if DB empty
-        # from src.models.database import Company, User
-        # if not Company.query.first():
-        #     demo_company = Company(
-        #         name="Demo Installatiebedrijf B.V.",
-        #         address="Demostraat 123",
-        #         postal_code="1234 AB",
-        #         city="Amsterdam",
-        #         phone="+31 20 123 4567",
-        #         email="info@demo-installatie.nl",
-        #         vat_number="NL123456789B01",
-        #         invoice_prefix="F",
-        #         quote_prefix="O",
-        #         workorder_prefix="W",
-        #     )
-        #     db.session.add(demo_company)
-        #     db.session.flush()
-        #     admin_user = User(
-        #         company_id=demo_company.id,
-        #         username="admin",
-        #         email="admin@bedrijf.nl",
-        #         first_name="Admin",
-        #         last_name="User",
-        #         role="admin",
-        #     )
-        #     admin_user.set_password("admin123")
-        #     db.session.add(admin_user)
-        #     db.session.commit()
-        #     print("Seeded default company and admin user: admin@bedrijf.nl / admin123")
-        pass
-
-    # Health check
+    # --- Health Check Endpoint ---
     @app.route('/health')
     def health_check():
-        return {'status': 'healthy', 'service': 'Final CRM API'}, 200
+        # Add a database connectivity check for a more robust health check
+        try:
+            db.session.execute("SELECT 1")
+            return {'status': 'healthy', 'database': 'connected'}, 200
+        except Exception as e:
+            logging.error(f"Health check failed: Database connection error: {e}")
+            return {'status': 'unhealthy', 'database': 'disconnected'}, 503
 
-    # Serve static frontend
-    @app.route('/', defaults={'path': ''})
-    @app.route('/<path:path>')
-    def serve(path):
-        static_folder = app.static_folder
-        if static_folder and os.path.exists(os.path.join(static_folder, path)):
-            return send_from_directory(static_folder, path)
-        index_file = os.path.join(static_folder, 'index.html')
-        if static_folder and os.path.exists(index_file):
-            return send_from_directory(static_folder, 'index.html')
-        return 'Final CRM API is running. Frontend not deployed yet.', 200
-
+    logging.info("--- Application Factory Finished ---")
     return app
 
+# This block is for local execution only. 
+# In Google Cloud Functions, the app is served by a WSGI server like Gunicorn.
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 8080))
+    # When running locally, this will use the .env variables to connect to a local DB
     app = create_app()
-    # app.run(host='0.0.0.0', port=port, debug=True) # Verwijder deze regel
-    # In Cloud Functions, Flask draait via WSGI en de server wordt beheerd door de runtime.
-    # Er is geen app.run() nodig.
+    port = int(os.environ.get('PORT', 8080))
+    app.run(host='0.0.0.0', port=port, debug=True)

@@ -24,24 +24,18 @@ function Login() {
   }
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    setLoading(true)
-
+    e.preventDefault();
+    setLoading(true);
     try {
-      const result = await login(formData.email, formData.password)
-      
-      if (result.success) {
-        success('Succesvol ingelogd!')
-        navigate('/dashboard')
-      } else {
-        showError(result.error)
-      }
+      await login(formData.email, formData.password);
+      // Redirect to dashboard on successful login
+      navigate('/dashboard');
     } catch (error) {
-      showError('Er is een fout opgetreden bij het inloggen')
+      showError(error.message || 'Inloggen is mislukt. Controleer uw gegevens.');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
