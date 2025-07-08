@@ -32,9 +32,6 @@ jobs:
       - name: Install Backend Dependencies
         run: |
           python -m pip install --upgrade pip
-          echo "--- Attempting to install problematic package directly ---"
-          pip install google-cloud-sqlalchemy-connector
-          echo "--- Installing remaining dependencies from files ---"
           pip install -r functions/requirements.txt
           pip install -r functions/backend/requirements.txt
       
