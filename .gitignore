@@ -1,5 +1,31 @@
-final-crm-frontend/node_modules/
-final-crm-backend/__pycache__/
-final-crm-backend/venv/
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual Environments
 .env
-frontend/node_modules/
+.venv
+env/
+venv/
+ENV/
+VENV/
+
+# Node dependencies
+node_modules/
+
+# Database
+*.sqlite3
+*.db
+
+# Uploads
+uploads/
+
+# IDE / Editor specific
+.vscode/
+.idea/
+
+# OS specific
+.DS_Store
+Thumbs.db
