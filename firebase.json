@@ -10,7 +10,7 @@
         "firebase-debug.*.log",
         "*.local"
       ],
-      "runtime": "python311"
+      "runtime": "python310"
     }
   ],
   "hosting": {
