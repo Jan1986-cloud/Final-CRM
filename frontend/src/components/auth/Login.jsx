@@ -28,9 +28,10 @@ function Login() {
     setLoading(true);
     try {
       await login(formData.email, formData.password);
-      // Redirect to dashboard on successful login
-      navigate('/dashboard');
+      success('Succesvol ingelogd!'); // Show success message
+      navigate('/dashboard'); // Navigate on success
     } catch (error) {
+      // The error is now thrown from AuthContext
       showError(error.message || 'Inloggen is mislukt. Controleer uw gegevens.');
     } finally {
       setLoading(false);

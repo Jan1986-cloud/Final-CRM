@@ -39,21 +39,19 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     try {
-      const response = await api.post('/auth/login', { email, password })
-      const { token, user: userData } = response.data
+      const response = await api.post('/auth/login', { email, password });
+      const { token, user: userData } = response.data;
 
-      localStorage.setItem('token', token)
-      setToken(token)
-      setUser(userData)
+      localStorage.setItem('token', token);
+      setToken(token);
+      setUser(userData);
 
-      return { success: true }
+      // No return value needed on success, absence of error is success.
     } catch (error) {
-      return {
-        success: false,
-        error: error.response?.data?.error || 'Login failed',
-      }
+      // Re-throw the error to be caught by the calling component
+      throw new Error(error.response?.data?.error || 'Inloggen mislukt');
     }
-  }
+  };
 
   const register = async (userData) => {
     try {
