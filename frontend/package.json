@@ -7,7 +7,6 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "start": "serve -s dist -p $PORT",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0"
   },
   "dependencies": {
