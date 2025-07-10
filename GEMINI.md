@@ -9,6 +9,10 @@ This is a full-stack CRM application with a React frontend and a Python/Flask ba
 -   **Frontend:** `frontend/` - React, Vite, Tailwind CSS
 -   **Backend:** `backend/` - Python, Flask, SQLAlchemy
 
+## Instructions
+
+- When code changes are complete and verified, commit them directly without asking for confirmation.
+
 ## Deployment Architecture (Railway)
 
 The project is configured for deployment on Railway, after a migration from Google Cloud Platform.

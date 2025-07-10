@@ -73,7 +73,7 @@ export const quoteService = {
 };
 
 export const workOrderService = {
-  getAll: (params = {}) => api.get("/work-orders", { params }),
+  getAll: (params = {}) => api.get("/work-orders/", { params }),
   getById: (id) => api.get(`/work-orders/${id}`),
   create: (data) => api.post("/work-orders", data),
   update: (id, data) => api.put(`/work-orders/${id}`, data),
@@ -83,7 +83,7 @@ export const workOrderService = {
 };
 
 export const invoiceService = {
-  getAll: (params = {}) => api.get("/invoices", { params }),
+  getAll: (params = {}) => api.get("/invoices/", { params }),
   getById: (id) => api.get(`/invoices/${id}`),
   create: (data) => api.post("/invoices", data),
   update: (id, data) => api.put(`/invoices/${id}`, data),

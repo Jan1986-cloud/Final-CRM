@@ -136,3 +136,7 @@ def create_app():
         return 'Final CRM API is running. Frontend not deployed yet.', 200
 
     return app
+
+
+# Create the Flask app instance for Gunicorn
+app = create_app()
