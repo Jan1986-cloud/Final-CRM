@@ -23,5 +23,9 @@ EXPOSE 5000
 # Set PYTHONPATH so 'src' is importable
 ENV PYTHONPATH=/app
 
-# Production: serve via gunicorn on the port provided by Railway
-CMD gunicorn -b 0.0.0.0:$PORT src.main:app
+# Copy and set up the entrypoint script
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Start the application via the entrypoint script
+CMD ["/entrypoint.sh"]
