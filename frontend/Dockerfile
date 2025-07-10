@@ -34,8 +34,12 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf.template
 # Expose port
 EXPOSE 80
 
-# Start nginx after substituting environment variables
-CMD ["/bin/sh", "-c", "envsubst '$BACKEND_URL' < /etc/nginx/conf.d/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
+# Copy and set up the entrypoint script
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Start nginx via the entrypoint script
+CMD ["/entrypoint.sh"]
 
 # To make the above work, we need to rename the nginx.conf to a template
 # and then substitute it. Let's correct the Dockerfile to reflect that.
