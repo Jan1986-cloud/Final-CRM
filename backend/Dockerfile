@@ -25,4 +25,3 @@ ENV PYTHONPATH=/app
 
 # Production: serve via gunicorn on port 5000
 CMD ["gunicorn", "-b", "0.0.0.0:5000", "src.main:app"]
-
