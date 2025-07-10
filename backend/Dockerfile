@@ -24,4 +24,4 @@ EXPOSE 5000
 ENV PYTHONPATH=/app
 
 # Production: serve via gunicorn on the port provided by Railway
-CMD ["gunicorn", "-b", "0.0.0.0:$PORT", "src.main:app"]
+CMD gunicorn -b 0.0.0.0:$PORT src.main:app
