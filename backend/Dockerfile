@@ -23,5 +23,5 @@ EXPOSE 5000
 # Set PYTHONPATH so 'src' is importable
 ENV PYTHONPATH=/app
 
-# Production: serve via gunicorn on port 5000
-CMD ["gunicorn", "-b", "0.0.0.0:5000", "src.main:app"]
+# Production: serve via gunicorn on the port provided by Railway
+CMD ["gunicorn", "-b", "0.0.0.0:$PORT", "src.main:app"]
