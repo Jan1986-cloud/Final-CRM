@@ -88,6 +88,9 @@ def create_app():
 
     # Ensure tables exist and seed default company + admin user once
     with app.app_context():
+        # Create database tables if they don't exist
+        db.create_all()
+
         # Seed demo data if DB empty
         from src.models.database import Company, User
         if not Company.query.first():
