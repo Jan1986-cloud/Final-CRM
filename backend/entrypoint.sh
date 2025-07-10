@@ -1,9 +1,11 @@
 #!/bin/sh
-
-# Exit immediately if a command exits with a non-zero status.
 set -e
 
-# Start Gunicorn, listening on the port provided by the $PORT environment variable.
-# Default to port 8000 if $PORT is not set.
+echo "--- EXECUTING ENTRYPOINT SCRIPT ---"
+echo "Value of PORT variable from environment: '$PORT'"
+
+# Default to port 8000 if $PORT is not set or empty
 PORT="${PORT:-8000}"
+echo "Gunicorn will listen on port: '$PORT'"
+
 exec gunicorn -b 0.0.0.0:$PORT src.main:app
