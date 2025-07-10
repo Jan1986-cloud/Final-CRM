@@ -5,6 +5,7 @@
     "rootDir": "frontend"
   },
   "deploy": {
-    "healthcheckPath": "/"
+    "healthcheckPath": "/",
+    "healthcheckTimeout": 60
   }
 }
