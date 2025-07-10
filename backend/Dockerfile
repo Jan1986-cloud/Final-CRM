@@ -28,4 +28,4 @@ COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 # Start the application via the entrypoint script
-CMD ["/entrypoint.sh"]
+ENTRYPOINT ["/entrypoint.sh"]
