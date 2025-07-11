@@ -1,31 +1,21 @@
-FROM python:3.11.4-slim-bullseye
+# Use a more complete base image to ensure all dependencies are available
+FROM python:3.11-bullseye
 
+# Set the working directory
 WORKDIR /app
 
-# Install system dependencies
+# Install essential build tools and PostgreSQL client libraries
 RUN apt-get update && apt-get install -y \
-    gcc \
+    build-essential \
+    libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first for better caching
+# Copy and install requirements
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
-COPY src/ ./src/
+# Copy the rest of the application
+COPY . .
 
-# Create uploads directory
-RUN mkdir -p uploads
-
-# Expose port
-EXPOSE 5000
-
-# Set PYTHONPATH so 'src' is importable
-ENV PYTHONPATH=/app
-
-# Copy and set up the entrypoint script
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-
-# Start the application via the entrypoint script
-ENTRYPOINT ["/entrypoint.sh"]
+# Set the entrypoint
+ENTRYPOINT ["/app/entrypoint.sh"]
