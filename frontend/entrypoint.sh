@@ -2,7 +2,12 @@
 set -e
 
 echo "--- DIAGNOSTIC: EXECUTING FRONTEND ENTRYPOINT ---"
-echo "DIAGNOSTIC: Value of BACKEND_URL is: '$BACKEND_URL'"
+echo "DIAGNOSTIC: Initial value of BACKEND_URL is: '$BACKEND_URL'"
+
+# Remove trailing semicolon from BACKEND_URL if it exists
+export BACKEND_URL=$(echo $BACKEND_URL | sed 's/;$//')
+
+echo "DIAGNOSTIC: Corrected value of BACKEND_URL is: '$BACKEND_URL'"
 
 # Substitute environment variables in the nginx configuration template
 envsubst '$BACKEND_URL' < /etc/nginx/conf.d/default.conf.template > /etc/nginx/conf.d/default.conf
