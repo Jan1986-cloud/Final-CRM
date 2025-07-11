@@ -4,8 +4,8 @@ set -e
 echo "--- DIAGNOSTIC: EXECUTING FRONTEND ENTRYPOINT ---"
 echo "DIAGNOSTIC: Initial value of BACKEND_URL is: '$BACKEND_URL'"
 
-# Use POSIX shell parameter expansion to remove trailing semicolon
-export BACKEND_URL=${BACKEND_URL%;}
+# Use awk to robustly remove the trailing semicolon
+export BACKEND_URL=$(echo "$BACKEND_URL" | awk '{sub(/;$/,"")}1')
 
 echo "DIAGNOSTIC: Corrected value of BACKEND_URL is: '$BACKEND_URL'"
 
