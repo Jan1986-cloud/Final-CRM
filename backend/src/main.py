@@ -43,16 +43,22 @@ def create_app():
     app.config['JWT_SECRET_KEY'] = jwt_secret_key
     app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)
 
-    # Database configuration
-    database_url = os.getenv('DATABASE_URL')
+    # Database configuration using Railway's environment variables
+    # Prioritize the private URL for internal connections
+    database_url = os.getenv('DATABASE_PRIVATE_URL') or os.getenv('DATABASE_URL')
     if database_url:
+        # Railway's Postgres URL might start with 'postgres://', 
+        # but SQLAlchemy requires 'postgresql://'.
+        if database_url.startswith('postgres://'):
+            database_url = database_url.replace('postgres://', 'postgresql://', 1)
         app.config['SQLALCHEMY_DATABASE_URI'] = database_url
     else:
-        # SQLite for development; ensure the database folder exists
+        # Fallback to SQLite for local development if no database URL is found
         db_folder = os.path.join(os.path.dirname(__file__), 'database')
         os.makedirs(db_folder, exist_ok=True)
         db_path = os.path.join(db_folder, 'app.db')
         app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
+        print("WARNING: No DATABASE_URL found. Falling back to SQLite. This is not suitable for production.")
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     # Initialize extensions
