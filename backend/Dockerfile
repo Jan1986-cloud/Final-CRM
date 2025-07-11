@@ -1,21 +1,30 @@
-# Use a more complete base image to ensure all dependencies are available
+# Use a stable, full-featured base image
 FROM python:3.11-bullseye
+
+# Set the Python path to include the app root, making imports predictable
+ENV PYTHONPATH /app
 
 # Set the working directory
 WORKDIR /app
 
-# Install essential build tools and PostgreSQL client libraries
-RUN apt-get update && apt-get install -y     build-essential     libpq-dev     && rm -rf /var/lib/apt/lists/*
+# Install system dependencies required for building Python packages
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy and install requirements
+# Copy and install Python requirements
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the application
+# Copy the entire application source code
 COPY . .
 
-# Ensure the entrypoint script is executable
+# Ensure the entrypoint (now managed by CMD) would have been executable
+# This is kept for good practice in case an entrypoint is re-introduced
 RUN chmod +x /app/entrypoint.sh
 
-# Set the entrypoint
-ENTRYPOINT ["/app/entrypoint.sh"]
+# CMD instruction to start the application with maximum logging
+# We are NOT using the entrypoint.sh script anymore.
+# Gunicorn will be started directly by the container.
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "1", "--log-level", "debug", "src.main:app"]

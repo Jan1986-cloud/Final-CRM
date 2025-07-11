@@ -1,9 +1,5 @@
 import os
-import sys
 from datetime import timedelta
-
-# Ensure 'backend' directory is on the import path so 'src' is resolvable
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 # Load environment variables from .env (search parent directories)
 from dotenv import load_dotenv, find_dotenv
