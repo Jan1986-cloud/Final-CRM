@@ -22,15 +22,12 @@ RUN apk add --no-cache gettext
 # Copy the built static files from the build stage
 COPY --from=build /app/dist /usr/share/nginx/html
 
-# Copy the Nginx configuration template
+# Copy the Nginx configuration as a template that can be substituted
 COPY nginx.conf /etc/nginx/conf.d/default.conf.template
 
-# Copy the entrypoint script
+# Copy the entrypoint script that performs the substitution
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
-
-# Expose port 80
-EXPOSE 80
 
 # Run the entrypoint script when the container starts
 CMD ["/entrypoint.sh"]
