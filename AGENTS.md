@@ -1,5 +1,16 @@
 # AGENTS Richtlijnen
 
+startprompt voor deploying
+de map waar je in zit moet gesyncd worden met                        │
+│    https://github.com/Jan1986-cloud/Final-CRM.git                       │
+│    daarna moet de app gedeployd worden op railway. je bent al ingelogd. │
+│     Railway token en ssh sleutels staan in .env                         │
+│    Je deployd de app op railway. je vraagt de logs op. je leest de      │
+│    logs. je lost bugs op. je commit deze aanpassingen en pusht naar     │
+│    github. je deployt opnieuw. leest de logs. lost de bugs op. etc.     │
+│    etc. ter info, de map op github is nieuwer dan op de pc, je synct    │
+│    deze kant op    
+
 ## 1. Code Stijl
 
 - **Python**: Gebruik [Black](https://github.com/psf/black). Houd rekening met PEP 8.

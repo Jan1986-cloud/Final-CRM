@@ -1,0 +1,13 @@
+{
+  "/_not-found/page": "/_not-found",
+  "/favicon.ico/route": "/favicon.ico",
+  "/page": "/",
+  "/(app)/articles/page": "/articles",
+  "/(app)/articles/[id]/page": "/articles/[id]",
+  "/(app)/clients/[id]/page": "/clients/[id]",
+  "/(app)/documents/[id]/page": "/documents/[id]",
+  "/(app)/profile/page": "/profile",
+  "/(app)/clients/page": "/clients",
+  "/(app)/documents/page": "/documents",
+  "/(app)/suggest-rule/page": "/suggest-rule"
+}
