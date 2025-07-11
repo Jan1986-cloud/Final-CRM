@@ -5,10 +5,7 @@ FROM python:3.11-bullseye
 WORKDIR /app
 
 # Install essential build tools and PostgreSQL client libraries
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y     build-essential     libpq-dev     && rm -rf /var/lib/apt/lists/*
 
 # Copy and install requirements
 COPY requirements.txt .
