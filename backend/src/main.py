@@ -92,40 +92,41 @@ def create_app():
     app.register_blueprint(documents_bp, url_prefix='/api/documents')
     app.register_blueprint(excel_bp, url_prefix='/api/excel')
 
-    # Ensure tables exist and seed default company + admin user once
+    # Ensure tables exist. Seeding is disabled for production stability.
+    # Seeding should be done via a separate one-off script or command.
     with app.app_context():
-        # Create database tables if they don't exist
         db.create_all()
-
-        # Seed demo data if DB empty
-        from src.models.database import Company, User
-        if not Company.query.first():
-            demo_company = Company(
-                name="Demo Installatiebedrijf B.V.",
-                address="Demostraat 123",
-                postal_code="1234 AB",
-                city="Amsterdam",
-                phone="+31 20 123 4567",
-                email="info@demo-installatie.nl",
-                vat_number="NL123456789B01",
-                invoice_prefix="F",
-                quote_prefix="O",
-                workorder_prefix="W",
-            )
-            db.session.add(demo_company)
-            db.session.flush()
-            admin_user = User(
-                company_id=demo_company.id,
-                username="admin",
-                email="admin@bedrijf.nl",
-                first_name="Admin",
-                last_name="User",
-                role="admin",
-            )
-            admin_user.set_password("admin123")
-            db.session.add(admin_user)
-            db.session.commit()
-            print("Seeded default company and admin user: admin@bedrijf.nl / admin123")
+        print("Database tables checked/created. Automatic seeding is disabled.")
+        #
+        # # Seed demo data if DB empty - DISABLED FOR DEBUGGING
+        # from src.models.database import Company, User
+        # if not Company.query.first():
+        #     demo_company = Company(
+        #         name="Demo Installatiebedrijf B.V.",
+        #         address="Demostraat 123",
+        #         postal_code="1234 AB",
+        #         city="Amsterdam",
+        #         phone="+31 20 123 4567",
+        #         email="info@demo-installatie.nl",
+        #         vat_number="NL123456789B01",
+        #         invoice_prefix="F",
+        #         quote_prefix="O",
+        #         workorder_prefix="W",
+        #     )
+        #     db.session.add(demo_company)
+        #     db.session.flush()
+        #     admin_user = User(
+        #         company_id=demo_company.id,
+        #         username="admin",
+        #         email="admin@bedrijf.nl",
+        #         first_name="Admin",
+        #         last_name="User",
+        #         role="admin",
+        #     )
+        #     admin_user.set_password("admin123")
+        #     db.session.add(admin_user)
+        #     db.session.commit()
+        #     print("Seeded default company and admin user: admin@bedrijf.nl / admin123")
 
     # Health check
     @app.route('/health')
