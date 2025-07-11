@@ -1,0 +1,422 @@
+POST /api/auth/login:
+  description: Authenticate a user and return a JWT token.
+  method: POST
+  path: /api/auth/login
+  request:
+    required:
+    - password
+    oneOf:
+      - required: [email]
+      - required: [username]
+    properties:
+      email: {type: string, format: email}
+      username: {type: string}
+      password: {type: string}
+  response:
+    properties:
+      message: {type: string}
+      token: {type: string}
+      user:
+        type: object
+        properties:
+          id: {type: string}
+          username: {type: string}
+          email: {type: string}
+          full_name: {type: string}
+          role: {type: string}
+          company_id: {type: string}
+          company_name: {type: string}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: auth_v1
+GET /:
+  description: 'TODO: Add description'
+  method: GET
+  path: /
+  request: {}
+  response: {}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: unspecified
+GET /<article_id>:
+  description: 'TODO: Add description'
+  method: GET
+  path: /<article_id>
+  request: {}
+  response: {}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: unspecified
+POST /:
+  description: 'TODO: Add description'
+  method: POST
+  path: /
+  request: {}
+  response: {}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: unspecified
+PUT /<article_id>:
+  description: 'TODO: Add description'
+  method: PUT
+  path: /<article_id>
+  request: {}
+  response: {}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: unspecified
+GET /categories:
+  description: 'TODO: Add description'
+  method: GET
+  path: /categories
+  request: {}
+  response: {}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: unspecified
+POST /categories:
+  description: 'TODO: Add description'
+  method: POST
+  path: /categories
+  request: {}
+  response: {}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: unspecified
+POST /stock-adjustment:
+  description: 'TODO: Add description'
+  method: POST
+  path: /stock-adjustment
+  request: {}
+  response: {}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: unspecified
+POST /register:
+  description: 'TODO: Add description'
+  method: POST
+  path: /register
+  request: {}
+  response: {}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: unspecified
+POST /logout:
+  description: 'TODO: Add description'
+  method: POST
+  path: /logout
+  request: {}
+  response: {}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: unspecified
+GET /me:
+  description: 'TODO: Add description'
+  method: GET
+  path: /me
+  request: {}
+  response: {}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: unspecified
+POST /change-password:
+  description: 'TODO: Add description'
+  method: POST
+  path: /change-password
+  request: {}
+  response: {}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: unspecified
+GET /<int:company_id>:
+  description: 'TODO: Add description'
+  method: GET
+  path: /<int:company_id>
+  request: {}
+  response: {}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: unspecified
+PUT /<int:company_id>:
+  description: 'TODO: Add description'
+  method: PUT
+  path: /<int:company_id>
+  request: {}
+  response: {}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: unspecified
+DELETE /<int:company_id>:
+  description: 'TODO: Add description'
+  method: DELETE
+  path: /<int:company_id>
+  request: {}
+  response: {}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: unspecified
+GET /<int:company_id>/settings:
+  description: 'TODO: Add description'
+  method: GET
+  path: /<int:company_id>/settings
+  request: {}
+  response: {}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: unspecified
+GET /<customer_id>:
+  description: 'TODO: Add description'
+  method: GET
+  path: /<customer_id>
+  request: {}
+  response: {}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: unspecified
+PUT /<customer_id>:
+  description: 'TODO: Add description'
+  method: PUT
+  path: /<customer_id>
+  request: {}
+  response: {}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: unspecified
+DELETE /<customer_id>:
+  description: 'TODO: Add description'
+  method: DELETE
+  path: /<customer_id>
+  request: {}
+  response: {}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: unspecified
+GET /<customer_id>/locations:
+  description: 'TODO: Add description'
+  method: GET
+  path: /<customer_id>/locations
+  request: {}
+  response: {}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: unspecified
+POST /<customer_id>/locations:
+  description: 'TODO: Add description'
+  method: POST
+  path: /<customer_id>/locations
+  request: {}
+  response: {}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: unspecified
+GET /templates:
+  description: 'TODO: Add description'
+  method: GET
+  path: /templates
+  request: {}
+  response: {}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: unspecified
+DELETE /templates/<template_id>:
+  description: 'TODO: Add description'
+  method: DELETE
+  path: /templates/<template_id>
+  request: {}
+  response: {}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: unspecified
+POST /generate:
+  description: 'TODO: Add description'
+  method: POST
+  path: /generate
+  request: {}
+  response: {}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: unspecified
+GET /download/<document_id>:
+  description: 'TODO: Add description'
+  method: GET
+  path: /download/<document_id>
+  request: {}
+  response: {}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: unspecified
+POST /preview/<template_type>:
+  description: 'TODO: Add description'
+  method: POST
+  path: /preview/<template_type>
+  request: {}
+  response: {}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: unspecified
+GET /customers/export:
+  description: 'TODO: Add description'
+  method: GET
+  path: /customers/export
+  request: {}
+  response: {}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: unspecified
+POST /customers/import:
+  description: 'TODO: Add description'
+  method: POST
+  path: /customers/import
+  request: {}
+  response: {}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: unspecified
+GET /articles/export:
+  description: 'TODO: Add description'
+  method: GET
+  path: /articles/export
+  request: {}
+  response: {}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: unspecified
+POST /articles/import:
+  description: 'TODO: Add description'
+  method: POST
+  path: /articles/import
+  request: {}
+  response: {}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: unspecified
+GET /templates/customers:
+  description: 'TODO: Add description'
+  method: GET
+  path: /templates/customers
+  request: {}
+  response: {}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: unspecified
+GET /templates/articles:
+  description: 'TODO: Add description'
+  method: GET
+  path: /templates/articles
+  request: {}
+  response: {}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: unspecified
+GET /<int:invoice_id>:
+  description: 'TODO: Add description'
+  method: GET
+  path: /<int:invoice_id>
+  request: {}
+  response: {}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: unspecified
+PUT /<int:invoice_id>:
+  description: 'TODO: Add description'
+  method: PUT
+  path: /<int:invoice_id>
+  request: {}
+  response: {}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: unspecified
+DELETE /<int:invoice_id>:
+  description: 'TODO: Add description'
+  method: DELETE
+  path: /<int:invoice_id>
+  request: {}
+  response: {}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: unspecified
+POST /from-work-orders:
+  description: 'TODO: Add description'
+  method: POST
+  path: /from-work-orders
+  request: {}
+  response: {}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: unspecified
+GET /stats:
+  description: 'TODO: Add description'
+  method: GET
+  path: /stats
+  request: {}
+  response: {}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: unspecified
+GET /<quote_id>:
+  description: 'TODO: Add description'
+  method: GET
+  path: /<quote_id>
+  request: {}
+  response: {}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: unspecified
+PUT /<quote_id>:
+  description: 'TODO: Add description'
+  method: PUT
+  path: /<quote_id>
+  request: {}
+  response: {}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: unspecified
+PUT /<quote_id>/status:
+  description: 'TODO: Add description'
+  method: PUT
+  path: /<quote_id>/status
+  request: {}
+  response: {}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: unspecified
+POST /<quote_id>/duplicate:
+  description: 'TODO: Add description'
+  method: POST
+  path: /<quote_id>/duplicate
+  request: {}
+  response: {}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: unspecified
+GET /users:
+  description: 'TODO: Add description'
+  method: GET
+  path: /users
+  request: {}
+  response: {}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: unspecified
+POST /users:
+  description: 'TODO: Add description'
+  method: POST
+  path: /users
+  request: {}
+  response: {}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: unspecified
+GET /users/<int:user_id>:
+  description: 'TODO: Add description'
+  method: GET
+  path: /users/<int:user_id>
+  request: {}
+  response: {}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: unspecified
+PUT /users/<int:user_id>:
+  description: 'TODO: Add description'
+  method: PUT
+  path: /users/<int:user_id>
+  request: {}
+  response: {}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: unspecified
+DELETE /users/<int:user_id>:
+  description: 'TODO: Add description'
+  method: DELETE
+  path: /users/<int:user_id>
+  request: {}
+  response: {}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: unspecified
+GET /<work_order_id>:
+  description: 'TODO: Add description'
+  method: GET
+  path: /<work_order_id>
+  request: {}
+  response: {}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: unspecified
+POST /<work_order_id>/time-entries:
+  description: 'TODO: Add description'
+  method: POST
+  path: /<work_order_id>/time-entries
+  request: {}
+  response: {}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: unspecified
+PUT /<work_order_id>/status:
+  description: 'TODO: Add description'
+  method: PUT
+  path: /<work_order_id>/status
+  request: {}
+  response: {}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: unspecified
+PATCH /<work_order_id>/complete:
+  description: 'TODO: Add description'
+  method: PATCH
+  path: /<work_order_id>/complete
+  request: {}
+  response: {}
+  updated_at: '2025-07-11T15:30:00Z'
+  version: unspecified

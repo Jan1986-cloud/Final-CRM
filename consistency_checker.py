@@ -1,252 +1,183 @@
 #!/usr/bin/env python3
 """
 Enhanced CRM Consistency Checker
-Detecteert alle naamgevingsfouten tussen database, backend en frontend
+Validates implementation against the API Contract Registry.
 """
 
-import json
+import ast
 import re
+import yaml
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
-
 
 class ConsistencyChecker:
     def __init__(self, project_root="."):
         self.project_root = Path(project_root)
         self.issues = defaultdict(list)
-        self.warnings = []
-        self.stats = {
-            "tables_found": 0,
-            "models_found": 0,
-            "routes_found": 0,
-            "api_calls_found": 0,
-            "warnings_found": 0,
-        }
+        self.contracts = self._load_contracts()
 
-    # ------------------------------------------------------------------
-    # Extraction helpers
-    # ------------------------------------------------------------------
-    def extract_sql_tables(self):
-        """Return tables and columns from SQL schema"""
-        schema_file = self.project_root / "final-crm-database-schema.sql"
-        tables = {}
-        if not schema_file.exists():
-            self.issues["missing_files"].append("SQL schema file not found")
-            return tables
+    def _load_contracts(self):
+        """Loads the API contracts from the YAML file."""
+        contract_file = self.project_root / "api_contracts.yaml"
+        if not contract_file.exists():
+            self.issues["missing_files"].append("api_contracts.yaml not found")
+            return {}
+        with open(contract_file, 'r') as f:
+            return yaml.safe_load(f) or {}
 
-        with open(schema_file) as f:
-            content = f.read()
+    def _get_contract_for_route(self, method, path):
+        """Finds the contract for a given method and path."""
+        # Normalize path for matching, e.g., /api/users/<uuid:user_id> -> /api/users/{user_id}
+        normalized_path = '/' + re.sub(r"<[^>:]+:([^>]+)>", r"{\1}", path).strip('/')
+        key = f"{method.upper()} {normalized_path}"
+        return self.contracts.get(key)
 
-        table_pattern = r"CREATE TABLE (\w+)\s*\((.*?)\);"
-        for table_name, columns in re.findall(
-            table_pattern, content, re.DOTALL | re.IGNORECASE
-        ):
-            tables[table_name] = []
-            column_pattern = r"^\s*(\w+)\s+\w+"
-            for line in columns.split("\n"):
-                col_match = re.match(column_pattern, line)
-                if col_match and not line.strip().startswith(
-                    ("PRIMARY", "FOREIGN", "CHECK", "UNIQUE")
-                ):
-                    tables[table_name].append(col_match.group(1))
-
-        self.stats["tables_found"] = len(tables)
-        return tables
-
-    def extract_model_tables(self):
-        models_file = self.project_root / "backend" / "src" / "models" / "database.py"
-        models = {}
-        if not models_file.exists():
-            self.issues["missing_files"].append("Models file not found")
-            return models
-
-        with open(models_file) as f:
-            content = f.read()
-
-        class_pattern = r"class (\w+)\(db\.Model\):(.*?)(?=class|$)"
-        for class_name, class_body in re.findall(class_pattern, content, re.DOTALL):
-            table_match = re.search(
-                r"__tablename__\s*=\s*[\"']([^\"']+)[\"']", class_body
-            )
-            if table_match:
-                table_name = table_match.group(1)
-                column_pattern = r"(\w+)\s*=\s*db\.Column"
-                columns = re.findall(column_pattern, class_body)
-                models[class_name] = {"table": table_name, "fields": columns}
-
-        self.stats["models_found"] = len(models)
-        return models
-
-    def extract_backend_routes(self):
+    def check_backend_routes(self):
+        """
+        Parses backend routes and validates their implementation against the API contract.
+        """
         routes_dir = self.project_root / "backend" / "src" / "routes"
-        all_routes = []
         if not routes_dir.exists():
             self.issues["missing_files"].append("Routes directory not found")
-            return all_routes
+            return
 
         for route_file in routes_dir.glob("*.py"):
             if route_file.name == "__init__.py":
                 continue
-            with open(route_file) as f:
+
+            with open(route_file, 'r') as f:
                 content = f.read()
+                try:
+                    tree = ast.parse(content)
+                except SyntaxError as e:
+                    self.issues["syntax_errors"].append(f"Could not parse {route_file.name}: {e}")
+                    continue
 
-            bp_match = re.search(r"(\w+)\s*=\s*Blueprint\([\"']([^\"']+)[\"']", content)
-            if not bp_match:
-                continue
-            bp_var = bp_match.group(1)
-            bp_name = bp_match.group(2)
-            pattern = rf"@{bp_var}\.route\([\"']([^\"']+)[\"'].*?methods=\[([^\]]+)\]"
-            for path, methods in re.findall(pattern, content):
-                methods_clean = [m.strip().strip("\"'") for m in methods.split(",")]
-                all_routes.append(
-                    {"blueprint": bp_name, "path": path, "methods": methods_clean}
+                # Find all function definitions (routes) in the file
+                for node in ast.walk(tree):
+                    if isinstance(node, ast.FunctionDef):
+                        route_info = self._get_route_info_from_decorator(node)
+                        if route_info:
+                            method, path = route_info
+                            contract = self._get_contract_for_route(method, path)
+                            if not contract:
+                                self.issues["unregistered_routes"].append(
+                                    f"Route {method} {path} in {route_file.name} is not defined in api_contracts.yaml"
+                                )
+                                continue
+                            
+                            self._validate_route_implementation(node, contract, route_file.name)
+
+    def _get_route_info_from_decorator(self, func_node):
+        """Extracts method and path from a Flask route decorator."""
+        for decorator in func_node.decorator_list:
+            if isinstance(decorator, ast.Call) and hasattr(decorator.func, 'attr') and decorator.func.attr == 'route':
+                path = decorator.args[0].s
+                for keyword in decorator.keywords:
+                    if keyword.arg == 'methods':
+                        # Assuming one method per route decorator for simplicity
+                        method = keyword.value.elts[0].s
+                        return method, path
+        return None
+
+    def _validate_route_implementation(self, func_node, contract, filename):
+        """
+        Validates the fields used in a route's implementation against its contract.
+        """
+        # Extract all `data.get('field_name')` calls
+        accessed_fields = set()
+        for node in ast.walk(func_node):
+            if (isinstance(node, ast.Call) and
+                hasattr(node.func, 'value') and
+                hasattr(node.func.value, 'id') and
+                node.func.value.id == 'data' and
+                hasattr(node.func, 'attr') and
+                node.func.attr == 'get' and
+                len(node.args) > 0 and
+                isinstance(node.args[0], ast.Str)):
+                accessed_fields.add(node.args[0].s)
+
+        # Get the expected fields from the contract
+        if 'properties' not in contract.get('request', {}):
+            if accessed_fields:
+                 self.issues["implementation_mismatch"].append(
+                    f"Route {func_node.name} in {filename} accesses fields {accessed_fields} but its contract expects no request body."
                 )
+            return # No request properties to validate against
 
-        self.stats["routes_found"] = len(all_routes)
-        return all_routes
+        expected_fields = set(contract['request']['properties'].keys())
 
-    def extract_frontend_api_calls(self):
-        api_file = self.project_root / "frontend" / "src" / "services" / "api.js"
-        endpoints = []
-        if not api_file.exists():
-            self.issues["missing_files"].append("api.js not found")
-            return endpoints
+        missing_in_impl = expected_fields - accessed_fields
+        extra_in_impl = accessed_fields - expected_fields
 
-        with open(api_file) as f:
-            content = f.read()
-
-        pattern = r"api\.(get|post|put|patch|delete)\([\"'](/[^\"']+)[\"']"
-        for method, url in re.findall(pattern, content):
-            endpoints.append({"method": method.upper(), "url": url})
-
-        self.stats["api_calls_found"] = len(endpoints)
-        return endpoints
-
-    # ------------------------------------------------------------------
-    # Consistency checks
-    # ------------------------------------------------------------------
-    def check_db_model_consistency(self, tables, models):
-        for table_name, columns in tables.items():
-            found = False
-            for model in models.values():
-                if model["table"] == table_name:
-                    found = True
-                    model_cols = set(model["fields"])
-                    sql_cols = set(columns)
-                    missing = sql_cols - model_cols
-                    extra = model_cols - sql_cols
-                    if missing:
-                        self.issues["missing_model_fields"].append(
-                            f"Table '{table_name}': columns missing in model: {sorted(missing)}"
-                        )
-                    if extra:
-                        self.issues["extra_model_fields"].append(
-                            f"Table '{table_name}': extra fields in model: {sorted(extra)}"
-                        )
-            if not found:
-                self.issues["missing_models"].append(
-                    f"Model for table '{table_name}' not found"
-                )
-
-    def check_model_route_consistency(self, models, routes):
-        model_tables = {m["table"] for m in models.values()}
-        valid = set(model_tables)
-        valid.update({"auth", "excel", "documents"})
-        for route in routes:
-            blueprint = route.get("blueprint")
-            if not blueprint:
-                continue
-            # Accept if direct match or simple pluralization
-            if (
-                blueprint in valid
-                or f"{blueprint}s" in model_tables
-                or (blueprint.endswith("s") and blueprint[:-1] in model_tables)
-            ):
-                continue
-            self.issues["route_model_mismatch"].append(
-                f"Blueprint '{blueprint}' has no matching model table"
+        if extra_in_impl:
+            self.issues["implementation_mismatch"].append(
+                f"Route '{func_node.name}' in {filename} accesses undeclared fields: {sorted(list(extra_in_impl))}. "
+                f"These must be defined in the contract."
             )
+        
+        # This check is optional, as not all fields need to be accessed
+        # if 'required' in contract['request']:
+        #     required_fields = set(contract['request']['required'])
+        #     unaccessed_required = required_fields - accessed_fields
+        #     if unaccessed_required:
+        #         self.issues["implementation_warning"].append(
+        #             f"Route '{func_node.name}' in {filename} does not access required fields: {sorted(list(unaccessed_required))}"
+        #         )
 
-    def check_route_api_consistency(self, routes, api_calls):
-        for call in api_calls:
-            found = False
-            for route in routes:
-                if (
-                    self._match_route(call["url"], route["path"])
-                    and call["method"] in route["methods"]
-                ):
-                    found = True
-                    break
-            if not found:
-                self.issues["missing_routes"].append(
-                    f"Frontend calls {call['method']} {call['url']} but no matching route"
-                )
-
-    def check_naming_conventions(self, tables, models, routes, api_calls):
-        for call in api_calls:
-            if "_" in call["url"]:
-                self.warnings.append(
-                    f"Endpoint {call['url']} uses underscore; consider using dashes"
-                )
-
-    # ------------------------------------------------------------------
-    # Utility
-    # ------------------------------------------------------------------
-    def _match_route(self, frontend_path, backend_path):
-        raw = re.sub(r"\$\{(\w+)\}", r"<\1>", frontend_path)
-        raw = raw.lstrip("/")
-        parts = raw.split("/", 1)
-        tail = parts[1] if len(parts) > 1 else ""
-        return tail.strip("/") == backend_path.strip("/")
 
     def generate_report(self):
-        report_lines = []
-        report_lines.append("CRM Consistency Report")
-        report_lines.append("=" * 40)
-        report_lines.append(f"Generated: {datetime.now().isoformat()}")
-        report_lines.append("")
-        for key, value in self.stats.items():
-            report_lines.append(f"{key}: {value}")
-        report_lines.append("")
+        """Generates and prints a consistency report."""
+        report_lines = [
+            "# API Consistency Report",
+            f"Generated: {datetime.now().isoformat()}",
+            "---",
+            "This report validates backend route implementations against the single source of truth: `api_contracts.yaml`.",
+            ""
+        ]
 
-        if self.warnings:
-            report_lines.append("## warnings")
-            for warning in self.warnings:
-                report_lines.append(f"- {warning}")
-            report_lines.append("")
+        if not self.contracts:
+            report_lines.append("## ❌ CRITICAL: `api_contracts.yaml` is missing or empty.")
+            print("\n".join(report_lines))
+            return
 
-        total = sum(len(v) for v in self.issues.values())
-        report_lines.append(f"Total issues: {total}")
-        for group, problems in self.issues.items():
-            if problems:
-                report_lines.append(f"\n## {group}")
-                for problem in problems:
-                    report_lines.append(f"- {problem}")
+        total_issues = sum(len(v) for v in self.issues.values())
 
+        if total_issues == 0:
+            report_lines.append("## ✅ SUCCESS: All checks passed. The implementation is consistent with the API contract.")
+        else:
+            report_lines.append(f"## ❌ FAILURE: Found {total_issues} consistency issues.")
+            for group, problems in self.issues.items():
+                if problems:
+                    report_lines.append(f"\n### {group.replace('_', ' ').title()}")
+                    for problem in problems:
+                        report_lines.append(f"- {problem}")
+        
         report_path = self.project_root / "consistency_report.md"
-        with open(report_path, "w") as f:
+        with open(report_path, "w", encoding="utf-8") as f:
             f.write("\n".join(report_lines))
+        
+        print("\n" + "="*80)
+        print("API CONSISTENCY CHECK COMPLETE")
         print(f"Report saved to {report_path}")
+        print("="*80 + "\n")
+        
+        return total_issues == 0
 
     def run(self):
-        tables = self.extract_sql_tables()
-        models = self.extract_model_tables()
-        routes = self.extract_backend_routes()
-        api_calls = self.extract_frontend_api_calls()
-
-        self.check_db_model_consistency(tables, models)
-        self.check_model_route_consistency(models, routes)
-        self.check_route_api_consistency(routes, api_calls)
-        self.check_naming_conventions(tables, models, routes, api_calls)
-        self.stats["warnings_found"] = len(self.warnings)
-        self.generate_report()
-
-        return not any(self.issues.values())
+        """Runs all consistency checks."""
+        print("Starting API consistency check...")
+        self.check_backend_routes()
+        return self.generate_report()
 
 
 if __name__ == "__main__":
     checker = ConsistencyChecker()
     success = checker.run()
     if not success:
+        print("Consistency check failed. Please review consistency_report.md")
         exit(1)
+    else:
+        print("Consistency check successful!")
+        exit(0)

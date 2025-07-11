@@ -97,15 +97,19 @@ def login():
         if not data:
             return jsonify({"error": "Invalid input"}), 400
 
-        login_id = data.get("email") or data.get("username")
-        if not login_id or not data.get("password"):
-            return jsonify({"error": "Email/username and password required"}), 400
+        # The contract allows for either email or username
+        login_identifier = data.get("email") or data.get("username")
+        password = data.get("password")
 
+        if not login_identifier or not password:
+            return jsonify({"error": "Email/username and password are required"}), 400
+
+        # Find the user by either email or username
         user = User.query.filter(
-            (User.username == login_id) | (User.email == login_id)
+            (User.email == login_identifier) | (User.username == login_identifier)
         ).first()
 
-        if not user or not user.check_password(data["password"]):
+        if not user or not user.check_password(password):
             return jsonify({"error": "Invalid credentials"}), 401
 
         if not getattr(user, "is_active", True):
