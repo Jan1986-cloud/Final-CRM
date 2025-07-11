@@ -97,36 +97,6 @@ def create_app():
     with app.app_context():
         db.create_all()
         print("Database tables checked/created. Automatic seeding is disabled.")
-        #
-        # # Seed demo data if DB empty - DISABLED FOR DEBUGGING
-        # from src.models.database import Company, User
-        # if not Company.query.first():
-        #     demo_company = Company(
-        #         name="Demo Installatiebedrijf B.V.",
-        #         address="Demostraat 123",
-        #         postal_code="1234 AB",
-        #         city="Amsterdam",
-        #         phone="+31 20 123 4567",
-        #         email="info@demo-installatie.nl",
-        #         vat_number="NL123456789B01",
-        #         invoice_prefix="F",
-        #         quote_prefix="O",
-        #         workorder_prefix="W",
-        #     )
-        #     db.session.add(demo_company)
-        #     db.session.flush()
-        #     admin_user = User(
-        #         company_id=demo_company.id,
-        #         username="admin",
-        #         email="admin@bedrijf.nl",
-        #         first_name="Admin",
-        #         last_name="User",
-        #         role="admin",
-        #     )
-        #     admin_user.set_password("admin123")
-        #     db.session.add(admin_user)
-        #     db.session.commit()
-        #     print("Seeded default company and admin user: admin@bedrijf.nl / admin123")
 
     # Health check
     @app.route('/health')
@@ -144,6 +114,37 @@ def create_app():
         if static_folder and os.path.exists(index_file):
             return send_from_directory(static_folder, 'index.html')
         return 'Final CRM API is running. Frontend not deployed yet.', 200
+
+    @app.cli.command("db_seed")
+    def db_seed():
+        from src.models.database import Company, User
+        if not Company.query.first():
+            demo_company = Company(
+                name="Demo Installatiebedrijf B.V.",
+                address="Demostraat 123",
+                postal_code="1234 AB",
+                city="Amsterdam",
+                phone="+31 20 123 4567",
+                email="info@demo-installatie.nl",
+                vat_number="NL123456789B01",
+                invoice_prefix="F",
+                quote_prefix="O",
+                workorder_prefix="W",
+            )
+            db.session.add(demo_company)
+            db.session.flush()
+            admin_user = User(
+                company_id=demo_company.id,
+                username="admin",
+                email="admin@bedrijf.nl",
+                first_name="Admin",
+                last_name="User",
+                role="admin",
+            )
+            admin_user.set_password("admin123")
+            db.session.add(admin_user)
+            db.session.commit()
+            print("Seeded default company and admin user: admin@bedrijf.nl / admin123")
 
     return app
 

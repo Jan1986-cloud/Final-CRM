@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from src.models.database import db, Customer, Location, User
 from sqlalchemy import or_
+from sqlalchemy.orm import joinedload
 
 customers_bp = Blueprint('customers', __name__)
 
@@ -38,7 +39,7 @@ def get_customers():
         active_only = _parse_bool_arg('active_only', True)
         
         # Build query - ScopedQuery automatically filters by company_id
-        query = Customer.query
+        query = Customer.query.options(joinedload(Customer.locations))
         
         if active_only:
             query = query.filter(Customer.is_active == True)

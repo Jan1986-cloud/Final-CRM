@@ -80,3 +80,29 @@ Om de applicatie naar een professioneel en stabiel niveau te tillen, adviseer ik
 Het project heeft een sterke basis, maar lijdt onder een gebrek aan discipline en geautomatiseerde controles, wat heeft geleid tot de recente, frustrerende deployment-problemen. De fundamenten voor een robuust systeem zijn aanwezig in de vorm van de contract- en checker-scripts, maar ze moeten met voorrang volledig worden geïmplementeerd en afgedwongen.
 
 Door het bovenstaande actieplan te volgen, kan dit project transformeren van een bron van onzekerheid naar een stabiele, performante en onderhoudbare applicatie die klaar is voor de toekomst.
+
+---
+**Nieuw Plan van Aanpak (2025-07-11)**
+---
+
+**Analyse:**
+De vorige analyse is nog steeds valide, maar de context is gewijzigd. De `consistency_checker.py` was onbetrouwbaar en is verwijderd. De naamgevingsinconsistenties in `api_contracts.yaml` zijn handmatig opgelost voor de vijf kern-routes. De overige risico's, met name op het gebied van database-integriteit en performance, blijven echter onveranderd en hebben nu de hoogste prioriteit.
+
+**Nieuw Actieplan:**
+De focus verschuift van API-contract-validatie naar directe, concrete verbeteringen in de code en database-structuur.
+
+**Prioriteit 1: Database Schema Versterking (Onmiddellijk)**
+Dit pakt de meest kritieke risico's voor data-integriteit en performance aan.
+1.  **Modellen Versterken:** Voeg `nullable=False` toe aan alle kritieke kolommen in `backend/src/models/database.py` (zoals `User.first_name`, `Article.name`, etc.) om incomplete data te voorkomen.
+2.  **Indexen Toevoegen:** Voeg `index=True` toe aan *alle* `ForeignKey`-kolommen in `backend/src/models/database.py` om query-performance drastisch te verbeteren.
+3.  **Lengte-constraints Instellen:** Definieer een maximale lengte (bv. `String(255)`) voor alle `String`-kolommen in de modellen om databasefouten en data-truncatie te voorkomen.
+4.  **SQL Schema Synchroniseren:** Werk het `final-crm-database-schema.sql` bestand bij om de wijzigingen in de modellen te reflecteren.
+
+**Prioriteit 2: Applicatielogica en Stabiliteit (Korte Termijn)**
+1.  **Seed-logica Verplaatsen:** Verwijder de database-seed-logica definitief uit `main.py` om onvoorspelbaar gedrag bij het opstarten te elimineren.
+2.  **CLI Seed Commando:** Implementeer een `flask db seed` commando met behulp van `Click` om de database op een gecontroleerde manier te kunnen vullen.
+3.  **N+1 Query Oplossen (Proof of Concept):** Identificeer en los één duidelijk N+1 query-probleem op (bv. in de `get_articles` of `get_customers` route) met `joinedload` of `selectinload` om de aanpak te valideren.
+
+**Prioriteit 3: Robuustheid en Documentatie (Lange Termijn)**
+1.  **Cascade-gedrag Definiëren:** Implementeer `ondelete`-gedrag (bv. `CASCADE` of `SET NULL`) voor `ForeignKey`-relaties om de data-integriteit bij verwijderingen te garanderen.
+2.  **API Contract Voltooien:** Vul de `api_contracts.yaml` verder aan. Hoewel er geen geautomatiseerde checker meer is, blijft het een waardevol document voor ontwikkelaars en voor eventuele toekomstige tooling.
