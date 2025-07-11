@@ -4,8 +4,8 @@ set -e
 echo "--- DIAGNOSTIC: EXECUTING FRONTEND ENTRYPOINT ---"
 echo "DIAGNOSTIC: Initial value of BACKEND_URL is: '$BACKEND_URL'"
 
-# Use awk to robustly remove the trailing semicolon
-export BACKEND_URL=$(echo "$BACKEND_URL" | awk '{sub(/;$/,"")}1')
+# Use grep to extract the URL, ignoring any trailing characters.
+export BACKEND_URL=$(echo "$BACKEND_URL" | grep -o 'https://[a-zA-Z0-9.-]*')
 
 echo "DIAGNOSTIC: Corrected value of BACKEND_URL is: '$BACKEND_URL'"
 
