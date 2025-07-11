@@ -9,6 +9,33 @@ This is a full-stack CRM application with a React frontend and a Python/Flask ba
 -   **Frontend:** `frontend/` - React, Vite, Nginx
 -   **Backend:** `backend/` - Python, Flask, Gunicorn
 
+## API Naming & Contract Consistency
+
+To prevent deployment failures and runtime errors due to naming inconsistencies, this project now follows a strict "contract-first" development workflow.
+
+**The Single Source of Truth:**
+The `api_contracts.yaml` file is the definitive "heilige graal" for all API endpoint definitions. It contains the formal contract, including paths, methods, and the schemas for all requests and responses.
+
+**The Guardian:**
+The `consistency_checker.py` script is the automated guardian of this contract. It programmatically validates the backend's implementation against the `api_contracts.yaml` file.
+
+### Mandatory Development Workflow
+
+**ALL** new feature development or modification of existing endpoints **MUST** follow this process:
+
+1.  **Define the Contract First:** Before writing any implementation code, define or update the endpoint's contract in `api_contracts.yaml`. This includes the request body, response body, and all expected fields.
+2.  **Implement the Feature:** Write the backend and frontend code to match the contract you just defined.
+3.  **Run the Consistency Check:** Before committing, run the guardian script from the project root:
+    ```bash
+    python consistency_checker.py
+    ```
+4.  **Verify the Report:** The script will generate a `consistency_report.md`. If there are any failures, go back to step 2 and fix the implementation to match the contract. **DO NOT** modify the contract to match a broken implementation.
+5.  **Commit:** Once the consistency check passes, commit the changes to `api_contracts.yaml`, the implementation files, and the updated `consistency_report.md` together.
+
+By adhering to this process, we can guarantee that naming and structural inconsistencies will no longer be a source of errors in this project.
+
+---
+
 ## Railway Project Configuration
 
 -   **Project ID:** `c485425e-5205-40be-bfb7-3059840b5d85`
