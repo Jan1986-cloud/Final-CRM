@@ -106,3 +106,22 @@ Dit pakt de meest kritieke risico's voor data-integriteit en performance aan.
 **Prioriteit 3: Robuustheid en Documentatie (Lange Termijn)**
 1.  **Cascade-gedrag Definiëren:** Implementeer `ondelete`-gedrag (bv. `CASCADE` of `SET NULL`) voor `ForeignKey`-relaties om de data-integriteit bij verwijderingen te garanderen.
 2.  **API Contract Voltooien:** Vul de `api_contracts.yaml` verder aan. Hoewel er geen geautomatiseerde checker meer is, blijft het een waardevol document voor ontwikkelaars en voor eventuele toekomstige tooling.
+
+---
+**Definitief Plan van Aanpak (2025-07-12)**
+---
+
+**Analyse:**
+Een kritieke misinterpretatie van de projectstatus en het verkeerd toepassen van logs van een ander project hebben geleid tot een onjuiste focus op Firebase. De duidelijke instructie is om **alleen Railway** te gebruiken voor deployment. De 502-fout die de gebruiker rapporteert, wordt waarschijnlijk veroorzaakt door een ongeldige start-configuratie of een crash bij het opstarten van de applicatie op Railway, niet door Firebase-authenticatie.
+
+**Nieuw Actieplan:**
+De absolute prioriteit is nu het verwijderen van alle Firebase-componenten en het zorgen voor een stabiele, deploybare applicatie op Railway.
+
+**Prioriteit 1: Firebase Volledig Verwijderen (Onmiddellijk)**
+1.  **Verwijder Firebase Directories & Files:** Verwijder de `functions`-directory, `apphosting.yaml`, en `firestore.indexes.json` volledig.
+2.  **Schoon `.env.example` op:** Verwijder alle `FIREBASE_*` en `GOOGLE_*` variabelen uit het `.env.example`-bestand om toekomstige verwarring te voorkomen.
+3.  **Commit & Push:** Leg de verwijdering van Firebase vast in een commit en push deze naar de `main`-branch.
+
+**Prioriteit 2: Stabiliseren van de Railway Deployment**
+1.  **Corrigeer Frontend API URL:** De `VITE_API_URL` in de frontend-configuratie moet worden ingesteld op de publieke URL van de backend-service op Railway. Dit is een omgevingsvariabele die in de Railway UI moet worden geconfigureerd.
+2.  **Verifieer Backend Start:** Na de opschoning zal ik de backend-logs (via de gebruiker) opnieuw analyseren om te verzekeren dat de applicatie correct start op Railway zonder onverwachte crashes. De Gunicorn-fix was waarschijnlijk correct, maar moet worden geverifieerd in een schone omgeving.
