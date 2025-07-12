@@ -21,50 +21,52 @@ from src.routes.documents import documents_bp
 from src.routes.excel import excel_bp
 
 
-def create_app():
+def create_app(config_override=None):
     """Application factory for the Final CRM API."""
-    # Enforce critical environment variables
-    secret_key = os.getenv('SECRET_KEY')
-    jwt_secret_key = os.getenv('JWT_SECRET_KEY')
-    frontend_url = os.getenv('FRONTEND_URL')
-    if not all([secret_key, jwt_secret_key, frontend_url]):
-        raise ValueError(
-            'Missing critical environment variables: SECRET_KEY, JWT_SECRET_KEY, or FRONTEND_URL'
-        )
-
     app = Flask(
         __name__, static_folder=os.path.join(os.path.dirname(__file__), 'static')
     )
-    app.config['SECRET_KEY'] = secret_key
-    app.config['JWT_SECRET_KEY'] = jwt_secret_key
-    app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)
 
-    # --- DATABASE CONFIGURATION (Robust Method) ---
-    # Deconstruct the connection from individual, reliable Railway environment variables.
-    # This avoids any issues with parsing the single DATABASE_URL string.
-    pg_host = os.getenv('PGHOST')
-    pg_port = os.getenv('PGPORT')
-    pg_user = os.getenv('PGUSER')
-    pg_password = os.getenv('PGPASSWORD')
-    pg_database = os.getenv('PGDATABASE')
+    # Default configuration
+    app.config.from_mapping(
+        SECRET_KEY=os.getenv('SECRET_KEY'),
+        JWT_SECRET_KEY=os.getenv('JWT_SECRET_KEY'),
+        JWT_ACCESS_TOKEN_EXPIRES=timedelta(hours=24),
+        SQLALCHEMY_TRACK_MODIFICATIONS=False,
+    )
 
-    if all([pg_host, pg_port, pg_user, pg_password, pg_database]):
-        # Build the connection string in the format SQLAlchemy requires.
-        database_url = f"postgresql://{pg_user}:{pg_password}@{pg_host}:{pg_port}/{pg_database}"
-        app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+    if config_override:
+        app.config.update(config_override)
     else:
-        # Fallback to SQLite for local development if any of the variables are missing.
-        db_folder = os.path.join(os.path.dirname(__file__), 'database')
-        os.makedirs(db_folder, exist_ok=True)
-        db_path = os.path.join(db_folder, 'app.db')
-        app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
-        print("CRITICAL WARNING: One or more PG... variables not found. Falling back to SQLite.")
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+        # Production/Development configuration
+        secret_key = os.getenv('SECRET_KEY')
+        jwt_secret_key = os.getenv('JWT_SECRET_KEY')
+        frontend_url = os.getenv('FRONTEND_URL')
+        if not all([secret_key, jwt_secret_key, frontend_url]):
+            raise ValueError(
+                'Missing critical environment variables: SECRET_KEY, JWT_SECRET_KEY, or FRONTEND_URL'
+            )
+
+        pg_host = os.getenv('PGHOST')
+        pg_port = os.getenv('PGPORT')
+        pg_user = os.getenv('PGUSER')
+        pg_password = os.getenv('PGPASSWORD')
+        pg_database = os.getenv('PGDATABASE')
+
+        if all([pg_host, pg_port, pg_user, pg_password, pg_database]):
+            database_url = f"postgresql://{pg_user}:{pg_password}@{pg_host}:{pg_port}/{pg_database}"
+            app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+        else:
+            db_folder = os.path.join(os.path.dirname(__file__), 'database')
+            os.makedirs(db_folder, exist_ok=True)
+            db_path = os.path.join(db_folder, 'app.db')
+            app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
+            print("CRITICAL WARNING: One or more PG... variables not found. Falling back to SQLite.")
 
     # Initialize extensions
     CORS(
         app,
-        origins=[frontend_url],
+        origins=os.getenv('FRONTEND_URL', '*'),
         supports_credentials=True,
         methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["Content-Type", "Authorization"]
@@ -92,11 +94,10 @@ def create_app():
     app.register_blueprint(documents_bp, url_prefix='/api/documents')
     app.register_blueprint(excel_bp, url_prefix='/api/excel')
 
-    # Ensure tables exist. Seeding is disabled for production stability.
-    # Seeding should be done via a separate one-off script or command.
     with app.app_context():
-        db.create_all()
-        print("Database tables checked/created. Automatic seeding is disabled.")
+        if not app.config.get('TESTING'):
+            db.create_all()
+            print("Database tables checked/created. Automatic seeding is disabled.")
 
     # Health check
     @app.route('/health')
@@ -149,5 +150,9 @@ def create_app():
     return app
 
 
-# Create the Flask app instance for Gunicorn
-app = create_app()
+if __name__ == '__main__':
+    # This script can be run directly for local development.
+    # To run with Gunicorn for production, use a command like:
+    # gunicorn --bind 0.0.0.0:8000 "src.main:create_app()"
+    app = create_app()
+    app.run(debug=True)
