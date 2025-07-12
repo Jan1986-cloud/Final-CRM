@@ -25,4 +25,4 @@ COPY . .
 RUN chmod +x /app/entrypoint.sh
 
 # CMD instruction to start the application with maximum logging and an explicit app definition
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "1", "--log-level", "debug", "--wsgi-app", "src.main:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "1", "--log-level", "debug", "src.main:app"]
