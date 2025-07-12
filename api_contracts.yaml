@@ -1,6 +1,118 @@
-# API Contract for Final CRM
+# API Contract for Final CRM - Single Source of Truth
+# Version: 2.1
+# Last updated: 2025-07-12
+# Notes: This version is synchronized with the full list of routes from the Flask app.
+# Next step is to fill in all the 'TODO' sections for request/response schemas.
 
-# AUTHENTICATION
+# --- Schemas -----------------------------------------------------------------
+schemas:
+  Pagination:
+    type: object
+    properties:
+      page: {type: integer, description: "Current page number"}
+      pages: {type: integer, description: "Total number of pages"}
+      per_page: {type: integer, description: "Items per page"}
+      total: {type: integer, description: "Total number of items"}
+      has_next: {type: boolean, description: "True if there is a next page"}
+      has_prev: {type: boolean, description: "True if there is a previous page"}
+
+  Article:
+    type: object
+    properties:
+      id: {type: string, format: uuid}
+      code: {type: string}
+      name: {type: string}
+      description: {type: string, nullable: true}
+      unit: {type: string, nullable: true}
+      purchase_price: {type: number, nullable: true}
+      selling_price: {type: number}
+      vat_rate: {type: number}
+      stock_quantity: {type: number}
+      min_stock_level: {type: number}
+      supplier: {type: string, nullable: true}
+      supplier_code: {type: string, nullable: true}
+      is_active: {type: boolean}
+      category_id: {type: string, format: uuid, nullable: true}
+      category_name: {type: string, nullable: true}
+      is_low_stock: {type: boolean, readOnly: true}
+      created_at: {type: string, format: date-time, readOnly: true}
+
+  ArticleCategory:
+    type: object
+    properties:
+      id: {type: string, format: uuid}
+      name: {type: string}
+      description: {type: string, nullable: true}
+      article_count: {type: integer, readOnly: true}
+
+  Customer:
+    type: object
+    properties:
+      id: {type: string, format: uuid}
+      company_name: {type: string}
+      contact_person: {type: string, nullable: true}
+      email: {type: string, format: email, nullable: true}
+      phone: {type: string, nullable: true}
+      mobile: {type: string, nullable: true}
+      address: {type: string, nullable: true}
+      postal_code: {type: string, nullable: true}
+      city: {type: string, nullable: true}
+      country: {type: string, nullable: true}
+      vat_number: {type: string, nullable: true}
+      payment_terms: {type: integer, nullable: true}
+      credit_limit: {type: number, nullable: true}
+      notes: {type: string, nullable: true}
+      is_active: {type: boolean}
+      created_at: {type: string, format: date-time, readOnly: true}
+      location_count: {type: integer, readOnly: true}
+
+  Location:
+    type: object
+    properties:
+      id: {type: string, format: uuid}
+      name: {type: string}
+      address: {type: string}
+      postal_code: {type: string, nullable: true}
+      city: {type: string, nullable: true}
+      country: {type: string, nullable: true}
+      contact_person: {type: string, nullable: true}
+      phone: {type: string, nullable: true}
+      access_instructions: {type: string, nullable: true}
+      notes: {type: string, nullable: true}
+      is_active: {type: boolean}
+
+# --- Endpoints ---------------------------------------------------------------
+
+GET /:
+  description: "TODO: Document this endpoint"
+  response:
+    properties:
+      message: {type: string}
+
+GET /health:
+  description: "Health check endpoint."
+  response:
+    properties:
+      status: {type: string}
+
+# AUTH
+POST /api/auth/register:
+  description: Register a new company and admin user.
+  request:
+    required: [company_name, email, password, username, first_name, last_name]
+    properties:
+      company_name: {type: string}
+      username: {type: string}
+      email: {type: string, format: email}
+      password: {type: string}
+      first_name: {type: string}
+      last_name: {type: string}
+  response:
+    properties:
+      message: {type: string}
+      token: {type: string}
+      user: {type: object} # TODO: Define user schema
+
 POST /api/auth/login:
   description: Authenticate a user and return a JWT token.
   request:
@@ -16,66 +128,24 @@ POST /api/auth/login:
     properties:
       message: {type: string}
       token: {type: string}
-      user:
-        type: object
-        properties:
-          id: {type: string, format: uuid}
-          username: {type: string}
-          email: {type: string, format: email}
-          full_name: {type: string}
-          role: {type: string}
-          company_id: {type: string, format: uuid}
-          company_name: {type: string}
-
-POST /api/auth/register:
-  description: Register a new company and admin user.
-  request:
-    required: [company_name, email, password]
-    properties:
-      company_name: {type: string}
-      email: {type: string, format: email}
-      password: {type: string}
-      first_name: {type: string}
-      last_name: {type: string}
-  response:
-    properties:
-      message: {type: string}
-      token: {type: string}
-      user:
-        type: object
-        properties:
-          id: {type: string, format: uuid}
-          email: {type: string, format: email}
-          company_id: {type: string, format: uuid}
-
-POST /api/auth/logout:
-  description: Logout the user (no action needed on server for JWT).
-  response:
-    properties:
-      message: {type: string}
+      user: {type: object} # TODO: Define user schema
 
 GET /api/auth/me:
   description: Get the current authenticated user's details.
   response:
     properties:
-      user:
-        type: object
-        properties:
-          id: {type: string, format: uuid}
-          username: {type: string}
-          email: {type: string, format: email}
-          first_name: {type: string}
-          last_name: {type: string}
-          role: {type: string}
-          company_id: {type: string, format: uuid}
+      user: {type: object} # TODO: Define user schema
+
+POST /api/auth/logout:
+  description: "TODO: Document this endpoint"
+  response:
+    properties:
+      message: {type: string}
 
 POST /api/auth/change-password:
-  description: Change the current user's password.
+  description: "TODO: Document this endpoint"
   request:
-    required: [current_password, new_password]
-    properties:
-      current_password: {type: string}
-      new_password: {type: string}
+    properties: {} # TODO: Define request schema
   response:
     properties:
       message: {type: string}
@@ -85,14 +155,12 @@ GET /api/articles:
   description: Get a paginated list of articles.
   response:
     properties:
-      articles: {type: array, items: {type: object}}
-      pagination: {type: object}
-
-GET /api/articles/{article_id}:
-  description: Get a single article by its ID.
-  response:
-    properties:
-      article: {type: object}
+      articles:
+        type: array
+        items:
+          $ref: "#/schemas/Article"
+      pagination:
+        $ref: "#/schemas/Pagination"
 
 POST /api/articles:
   description: Create a new article.
@@ -101,48 +169,29 @@ POST /api/articles:
     properties:
       code: {type: string}
       name: {type: string}
-      description: {type: string}
-      unit: {type: string}
-      purchase_price: {type: number}
+      description: {type: string, nullable: true}
+      unit: {type: string, nullable: true}
+      purchase_price: {type: number, nullable: true}
       selling_price: {type: number}
-      vat_rate: {type: number}
-      stock_quantity: {type: number}
-      min_stock_level: {type: number}
-      supplier: {type: string}
-      supplier_code: {type: string}
-      category_id: {type: string, format: uuid}
+      vat_rate: {type: number, nullable: true}
+      stock_quantity: {type: number, nullable: true}
+      min_stock_level: {type: number, nullable: true}
+      supplier: {type: string, nullable: true}
+      supplier_code: {type: string, nullable: true}
+      category_id: {type: string, format: uuid, nullable: true}
   response:
     properties:
       message: {type: string}
       article_id: {type: string, format: uuid}
 
-PUT /api/articles/{article_id}:
-  description: Update an existing article.
-  request:
-    properties:
-      code: {type: string}
-      name: {type: string}
-      description: {type: string}
-      unit: {type: string}
-      purchase_price: {type: number}
-      selling_price: {type: number}
-      vat_rate: {type: number}
-      stock_quantity: {type: number}
-      min_stock_level: {type: number}
-      supplier: {type: string}
-      supplier_code: {type: string}
-      is_active: {type: boolean}
-      category_id: {type: string, format: uuid}
-  response:
-    properties:
-      message: {type: string}
-
-# ARTICLE CATEGORIES
 GET /api/articles/categories:
   description: Get all article categories for the company.
   response:
     properties:
-      categories: {type: array, items: {type: object}}
+      categories:
+        type: array
+        items:
+          $ref: "#/schemas/ArticleCategory"
 
 POST /api/articles/categories:
   description: Create a new article category.
@@ -150,13 +199,12 @@ POST /api/articles/categories:
     required: [name]
     properties:
       name: {type: string}
-      description: {type: string}
+      description: {type: string, nullable: true}
   response:
     properties:
       message: {type: string}
       category_id: {type: string, format: uuid}
 
-# STOCK
 POST /api/articles/stock-adjustment:
   description: Adjust the stock quantity of an article.
   request:
@@ -169,19 +217,81 @@ POST /api/articles/stock-adjustment:
       message: {type: string}
       new_quantity: {type: number}
 
+GET /api/articles/{article_id}:
+  description: Get a single article by its ID.
+  response:
+    properties:
+      article:
+        $ref: "#/schemas/Article"
+
+PUT /api/articles/{article_id}:
+  description: Update an existing article.
+  request:
+    properties:
+      code: {type: string}
+      name: {type: string}
+      description: {type: string, nullable: true}
+      unit: {type: string, nullable: true}
+      purchase_price: {type: number, nullable: true}
+      selling_price: {type: number}
+      vat_rate: {type: number, nullable: true}
+      stock_quantity: {type: number, nullable: true}
+      min_stock_level: {type: number, nullable: true}
+      supplier: {type: string, nullable: true}
+      supplier_code: {type: string, nullable: true}
+      is_active: {type: boolean}
+      category_id: {type: string, format: uuid, nullable: true}
+  response:
+    properties:
+      message: {type: string}
+
+# COMPANIES
+GET /api/companies:
+  description: "TODO: Document this endpoint"
+  response:
+    properties: {} # TODO: Define response schema
+
+POST /api/companies:
+  description: "TODO: Document this endpoint"
+  request:
+    properties: {} # TODO: Define request schema
+  response:
+    properties: {} # TODO: Define response schema
+
+DELETE /api/companies/{company_id}:
+  description: "TODO: Document this endpoint"
+  response:
+    properties:
+      message: {type: string}
+
+GET /api/companies/{company_id}:
+  description: "TODO: Document this endpoint"
+  response:
+    properties: {} # TODO: Define response schema
+
+PUT /api/companies/{company_id}:
+  description: "TODO: Document this endpoint"
+  request:
+    properties: {} # TODO: Define request schema
+  response:
+    properties: {} # TODO: Define response schema
+
+GET /api/companies/{company_id}/settings:
+  description: "TODO: Document this endpoint"
+  response:
+    properties: {} # TODO: Define response schema
+
 # CUSTOMERS
 GET /api/customers:
   description: Get a paginated list of customers.
   response:
     properties:
-      customers: {type: array, items: {type: object}}
-      pagination: {type: object}
-
-GET /api/customers/{customer_id}:
-  description: Get a single customer by their ID, including locations.
-  response:
-    properties:
-      customer: {type: object}
+      customers:
+        type: array
+        items:
+          $ref: "#/schemas/Customer"
+      pagination:
+        $ref: "#/schemas/Pagination"
 
 POST /api/customers:
   description: Create a new customer.
@@ -189,44 +299,22 @@ POST /api/customers:
     required: [company_name]
     properties:
       company_name: {type: string}
-      contact_person: {type: string}
-      email: {type: string, format: email}
-      phone: {type: string}
-      mobile: {type: string}
-      address: {type: string}
-      postal_code: {type: string}
-      city: {type: string}
-      country: {type: string}
-      vat_number: {type: string}
-      payment_terms: {type: integer}
-      credit_limit: {type: number}
-      notes: {type: string}
+      contact_person: {type: string, nullable: true}
+      email: {type: string, format: email, nullable: true}
+      phone: {type: string, nullable: true}
+      mobile: {type: string, nullable: true}
+      address: {type: string, nullable: true}
+      postal_code: {type: string, nullable: true}
+      city: {type: string, nullable: true}
+      country: {type: string, nullable: true}
+      vat_number: {type: string, nullable: true}
+      payment_terms: {type: integer, nullable: true}
+      credit_limit: {type: number, nullable: true}
+      notes: {type: string, nullable: true}
   response:
     properties:
       message: {type: string}
       customer_id: {type: string, format: uuid}
-
-PUT /api/customers/{customer_id}:
-  description: Update an existing customer.
-  request:
-    properties:
-      company_name: {type: string}
-      contact_person: {type: string}
-      email: {type: string, format: email}
-      phone: {type: string}
-      mobile: {type: string}
-      address: {type: string}
-      postal_code: {type: string}
-      city: {type: string}
-      country: {type: string}
-      vat_number: {type: string}
-      payment_terms: {type: integer}
-      credit_limit: {type: number}
-      notes: {type: string}
-      is_active: {type: boolean}
-  response:
-    properties:
-      message: {type: string}
 
 DELETE /api/customers/{customer_id}:
   description: Soft delete a customer by setting them to inactive.
@@ -234,238 +322,261 @@ DELETE /api/customers/{customer_id}:
     properties:
       message: {type: string}
 
-# LOCATIONS
+GET /api/customers/{customer_id}:
+  description: Get a single customer by their ID, including locations.
+  response:
+    properties:
+      customer:
+        allOf:
+          - $ref: "#/schemas/Customer"
+          - type: object
+            properties:
+              locations:
+                type: array
+                items:
+                  $ref: "#/schemas/Location"
+
+PUT /api/customers/{customer_id}:
+  description: Update an existing customer.
+  request:
+    properties:
+      company_name: {type: string}
+      contact_person: {type: string, nullable: true}
+      email: {type: string, format: email, nullable: true}
+      phone: {type: string, nullable: true}
+      mobile: {type: string, nullable: true}
+      address: {type: string, nullable: true}
+      postal_code: {type: string, nullable: true}
+      city: {type: string, nullable: true}
+      country: {type: string, nullable: true}
+      vat_number: {type: string, nullable: true}
+      payment_terms: {type: integer, nullable: true}
+      credit_limit: {type: number, nullable: true}
+      notes: {type: string, nullable: true}
+      is_active: {type: boolean}
+  response:
+    properties:
+      message: {type: string}
+
 GET /api/customers/{customer_id}/locations:
   description: Get all active locations for a specific customer.
   response:
     properties:
-      locations: {type: array, items: {type: object}}
+      locations:
+        type: array
+        items:
+          $ref: "#/schemas/Location"
 
 POST /api/customers/{customer_id}/locations:
   description: Create a new location for a customer.
   request:
     required: [address]
     properties:
-      name: {type: string}
+      name: {type: string, nullable: true}
       address: {type: string}
-      postal_code: {type: string}
-      city: {type: string}
-      country: {type: string}
-      contact_person: {type: string}
-      phone: {type: string}
-      access_instructions: {type: string}
-      notes: {type: string}
+      postal_code: {type: string, nullable: true}
+      city: {type: string, nullable: true}
+      country: {type: string, nullable: true}
+      contact_person: {type: string, nullable: true}
+      phone: {type: string, nullable: true}
+      access_instructions: {type: string, nullable: true}
+      notes: {type: string, nullable: true}
   response:
     properties:
       message: {type: string}
       location_id: {type: string, format: uuid}
 
-# QUOTES
-GET /api/quotes:
-  description: Get a paginated list of quotes.
+# DOCUMENTS
+GET /api/documents/download/{document_id}:
+  description: "TODO: Document this endpoint"
   response:
-    properties:
-      quotes: {type: array, items: {type: object}}
-      pagination: {type: object}
+    properties: {} # TODO: Define response schema
 
-GET /api/quotes/{quote_id}:
-  description: Get a single quote by its ID, including lines.
-  response:
-    properties:
-      quote: {type: object}
-
-POST /api/quotes:
-  description: Create a new quote.
+POST /api/documents/generate:
+  description: "TODO: Document this endpoint"
   request:
-    required: [customer_id]
-    properties:
-      customer_id: {type: string, format: uuid}
-      location_id: {type: string, format: uuid}
-      title: {type: string}
-      description: {type: string}
-      quote_date: {type: string, format: date}
-      valid_until: {type: string, format: date}
-      notes: {type: string}
-      terms_conditions: {type: string}
-      lines: {type: array, items: {type: object}}
+    properties: {} # TODO: Define request schema
   response:
-    properties:
-      message: {type: string}
-      quote_id: {type: string, format: uuid}
-      quote_number: {type: string}
+    properties: {} # TODO: Define response schema
 
-PUT /api/quotes/{quote_id}:
-  description: Update an existing quote.
+POST /api/documents/preview/{template_type}:
+  description: "TODO: Document this endpoint"
   request:
-    properties:
-      customer_id: {type: string, format: uuid}
-      location_id: {type: string, format: uuid}
-      title: {type: string}
-      description: {type: string}
-      quote_date: {type: string, format: date}
-      valid_until: {type: string, format: date}
-      status: {type: string}
-      notes: {type: string}
-      terms_conditions: {type: string}
-      lines: {type: array, items: {type: object}}
+    properties: {} # TODO: Define request schema
+  response:
+    properties: {} # TODO: Define response schema
+
+GET /api/documents/templates:
+  description: "TODO: Document this endpoint"
+  response:
+    properties: {} # TODO: Define response schema
+
+DELETE /api/documents/templates/{template_id}:
+  description: "TODO: Document this endpoint"
   response:
     properties:
       message: {type: string}
 
-PUT /api/quotes/{quote_id}/status:
-  description: Update the status of a quote.
+# EXCEL
+GET /api/excel/articles/export:
+  description: "TODO: Document this endpoint"
+  response:
+    properties: {} # TODO: Define response schema
+
+POST /api/excel/articles/import:
+  description: "TODO: Document this endpoint"
   request:
-    required: [status]
-    properties:
-      status: {type: string}
+    properties: {} # TODO: Define request schema
   response:
-    properties:
-      message: {type: string}
+    properties: {} # TODO: Define response schema
 
-POST /api/quotes/{quote_id}/duplicate:
-  description: Duplicate an existing quote.
+GET /api/excel/customers/export:
+  description: "TODO: Document this endpoint"
   response:
-    properties:
-      message: {type: string}
-      quote_id: {type: string, format: uuid}
-      quote_number: {type: string}
+    properties: {} # TODO: Define response schema
 
-# WORK ORDERS
-GET /api/work-orders:
-  description: Get a paginated list of work orders.
-  response:
-    properties:
-      work_orders: {type: array, items: {type: object}}
-      pagination: {type: object}
-
-GET /api/work-orders/{work_order_id}:
-  description: Get a single work order by its ID.
-  response:
-    properties:
-      work_order: {type: object}
-
-POST /api/work-orders:
-  description: Create a new work order.
+POST /api/excel/customers/import:
+  description: "TODO: Document this endpoint"
   request:
-    required: [customer_id, title]
-    properties:
-      customer_id: {type: string, format: uuid}
-      location_id: {type: string, format: uuid}
-      quote_id: {type: string, format: uuid}
-      title: {type: string}
-      description: {type: string}
-      work_date: {type: string, format: date}
-      status: {type: string}
-      technician_id: {type: string, format: uuid}
-      notes: {type: string}
-      lines: {type: array, items: {type: object}}
+    properties: {} # TODO: Define request schema
   response:
-    properties:
-      message: {type: string}
-      work_order_id: {type: string, format: uuid}
-      work_order_number: {type: string}
+    properties: {} # TODO: Define response schema
 
-PUT /api/work-orders/{work_order_id}/status:
-  description: Update the status of a work order.
-  request:
-    required: [status]
-    properties:
-      status: {type: string}
+GET /api/excel/templates/articles:
+  description: "TODO: Document this endpoint"
   response:
-    properties:
-      message: {type: string}
+    properties: {} # TODO: Define response schema
 
-PATCH /api/work-orders/{work_order_id}/complete:
-  description: Mark a work order as complete.
+GET /api/excel/templates/customers:
+  description: "TODO: Document this endpoint"
   response:
-    properties:
-      message: {type: string}
-
-# TIME ENTRIES
-POST /api/work-orders/{work_order_id}/time-entries:
-  description: Add a time entry to a work order.
-  request:
-    required: [user_id, date, start_time, end_time]
-    properties:
-      user_id: {type: string, format: uuid}
-      date: {type: string, format: date}
-      start_time: {type: string, format: time}
-      end_time: {type: string, format: time}
-      is_billable: {type: boolean}
-      hourly_rate: {type: number}
-      vat_rate: {type: number}
-  response:
-    properties:
-      message: {type: string}
-      time_entry_id: {type: string, format: uuid}
+    properties: {} # TODO: Define response schema
 
 # INVOICES
 GET /api/invoices:
-  description: Get a paginated list of invoices.
+  description: "TODO: Document this endpoint"
   response:
-    properties:
-      invoices: {type: array, items: {type: object}}
-      pagination: {type: object}
-
-GET /api/invoices/{invoice_id}:
-  description: Get a single invoice by its ID.
-  response:
-    properties:
-      invoice: {type: object}
+    properties: {} # TODO: Define response schema
 
 POST /api/invoices:
-  description: Create a new invoice.
+  description: "TODO: Document this endpoint"
   request:
-    required: [customer_id, invoice_lines]
-    properties:
-      customer_id: {type: string, format: uuid}
-      invoice_date: {type: string, format: date}
-      payment_terms: {type: integer}
-      status: {type: string}
-      notes: {type: string}
-      work_order_ids: {type: array, items: {type: string, format: uuid}}
-      invoice_lines: {type: array, items: {type: object}}
+    properties: {} # TODO: Define request schema
   response:
-    properties:
-      id: {type: string, format: uuid}
-      invoice_number: {type: string}
-      total_amount: {type: number}
-      message: {type: string}
-
-PUT /api/invoices/{invoice_id}:
-  description: Update an existing invoice.
-  request:
-    properties:
-      invoice_date: {type: string, format: date}
-      due_date: {type: string, format: date}
-      status: {type: string}
-      payment_terms: {type: integer}
-      notes: {type: string}
-      work_order_ids: {type: array, items: {type: string, format: uuid}}
-      invoice_lines: {type: array, items: {type: object}}
-  response:
-    properties:
-      id: {type: string, format: uuid}
-      invoice_number: {type: string}
-      message: {type: string}
-
-DELETE /api/invoices/{invoice_id}:
-  description: Delete a draft invoice.
-  response:
-    properties:
-      message: {type: string}
+    properties: {} # TODO: Define response schema
 
 POST /api/invoices/from-work-orders:
-  description: Create a combined invoice from multiple work orders.
+  description: "TODO: Document this endpoint"
   request:
-    required: [work_order_ids]
-    properties:
-      work_order_ids: {type: array, items: {type: string, format: uuid}}
-      payment_terms: {type: integer}
+    properties: {} # TODO: Define request schema
+  response:
+    properties: {} # TODO: Define response schema
+
+GET /api/invoices/stats:
+  description: "TODO: Document this endpoint"
+  response:
+    properties: {} # TODO: Define response schema
+
+DELETE /api/invoices/{invoice_id}:
+  description: "TODO: Document this endpoint"
   response:
     properties:
-      id: {type: string, format: uuid}
-      invoice_number: {type: string}
-      total_amount: {type: number}
-      work_orders_count: {type: integer}
       message: {type: string}
+
+GET /api/invoices/{invoice_id}:
+  description: "TODO: Document this endpoint"
+  response:
+    properties: {} # TODO: Define response schema
+
+PUT /api/invoices/{invoice_id}:
+  description: "TODO: Document this endpoint"
+  request:
+    properties: {} # TODO: Define request schema
+  response:
+    properties: {} # TODO: Define response schema
+
+# QUOTES
+GET /api/quotes:
+  description: "TODO: Document this endpoint"
+  response:
+    properties: {} # TODO: Define response schema
+
+POST /api/quotes:
+  description: "TODO: Document this endpoint"
+  request:
+    properties: {} # TODO: Define request schema
+  response:
+    properties: {} # TODO: Define response schema
+
+GET /api/quotes/{quote_id}:
+  description: "TODO: Document this endpoint"
+  response:
+    properties: {} # TODO: Define response schema
+
+PUT /api/quotes/{quote_id}:
+  description: "TODO: Document this endpoint"
+  request:
+    properties: {} # TODO: Define request schema
+  response:
+    properties: {} # TODO: Define response schema
+
+POST /api/quotes/{quote_id}/duplicate:
+  description: "TODO: Document this endpoint"
+  response:
+    properties: {} # TODO: Define response schema
+
+PUT /api/quotes/{quote_id}/status:
+  description: "TODO: Document this endpoint"
+  request:
+    properties: {} # TODO: Define request schema
+  response:
+    properties: {} # TODO: Define response schema
+
+# WORK ORDERS
+GET /api/work-orders:
+  description: "TODO: Document this endpoint"
+  response:
+    properties: {} # TODO: Define response schema
+
+POST /api/work-orders:
+  description: "TODO: Document this endpoint"
+  request:
+    properties: {} # TODO: Define request schema
+  response:
+    properties: {} # TODO: Define response schema
+
+GET /api/work-orders/stats:
+  description: "TODO: Document this endpoint"
+  response:
+    properties: {} # TODO: Define response schema
+
+GET /api/work-orders/{work_order_id}:
+  description: "TODO: Document this endpoint"
+  response:
+    properties: {} # TODO: Define response schema
+
+PATCH /api/work-orders/{work_order_id}/complete:
+  description: "TODO: Document this endpoint"
+  response:
+    properties:
+      message: {type: string}
+
+PUT /api/work-orders/{work_order_id}/status:
+  description: "TODO: Document this endpoint"
+  request:
+    properties: {} # TODO: Define request schema
+  response:
+    properties: {} # TODO: Define response schema
+
+POST /api/work-orders/{work_order_id}/time-entries:
+  description: "TODO: Document this endpoint"
+  request:
+    properties: {} # TODO: Define request schema
+  response:
+    properties: {} # TODO: Define response schema
+
+# Catch-all for frontend routing
+GET /{path}:
+  description: "Serves the frontend application."
+  response:
+    properties: {} # HTML content

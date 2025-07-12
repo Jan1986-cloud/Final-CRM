@@ -30,17 +30,14 @@ def _parse_bool_arg(name, default=False):
 @customers_bp.route('/', methods=['GET'])
 @jwt_required()
 def get_customers():
-    """Get all customers for the company"""
+    """Get all customers for the company, adhering to the API contract."""
     try:
-        # Parse query parameters
         page = _parse_int_arg('page', 1)
         per_page = _parse_int_arg('per_page', 50, max_value=100)
         search = request.args.get('search', '').strip()
         active_only = _parse_bool_arg('active_only', True)
         
-        # Build query - ScopedQuery automatically filters by company_id
-        query = Customer.query.options(joinedload(Customer.locations))
-        
+        query = Customer.query
         if active_only:
             query = query.filter(Customer.is_active == True)
         
@@ -53,34 +50,12 @@ def get_customers():
             )
             query = query.filter(search_filter)
         
-        # Order by company name
-        query = query.order_by(Customer.company_name)
-        
-        # Paginate
-        customers = query.paginate(
+        customers = query.order_by(Customer.company_name).paginate(
             page=page, per_page=per_page, error_out=False
         )
         
         return jsonify({
-            'customers': [{
-                'id': customer.id,
-                'company_name': customer.company_name,
-                'contact_person': customer.contact_person,
-                'email': customer.email,
-                'phone': customer.phone,
-                'mobile': customer.mobile,
-                'address': customer.address,
-                'postal_code': customer.postal_code,
-                'city': customer.city,
-                'country': customer.country,
-                'vat_number': customer.vat_number,
-                'payment_terms': customer.payment_terms,
-                'credit_limit': float(customer.credit_limit) if customer.credit_limit else None,
-                'notes': customer.notes,
-                'is_active': customer.is_active,
-                'created_at': customer.created_at.isoformat(),
-                'location_count': len(customer.locations)
-            } for customer in customers.items],
+            'customers': [customer.to_dict() for customer in customers.items],
             'pagination': {
                 'page': customers.page,
                 'pages': customers.pages,
@@ -97,46 +72,14 @@ def get_customers():
 @customers_bp.route('/<customer_id>', methods=['GET'])
 @jwt_required()
 def get_customer(customer_id):
-    """Get specific customer with locations"""
+    """Get a specific customer with locations, adhering to the API contract."""
     try:
-        # .get() is now automatically scoped by company_id
         customer = Customer.query.get(customer_id)
-        
         if not customer:
             return jsonify({'error': 'Customer not found'}), 404
         
         return jsonify({
-            'customer': {
-                'id': customer.id,
-                'company_name': customer.company_name,
-                'contact_person': customer.contact_person,
-                'email': customer.email,
-                'phone': customer.phone,
-                'mobile': customer.mobile,
-                'address': customer.address,
-                'postal_code': customer.postal_code,
-                'city': customer.city,
-                'country': customer.country,
-                'vat_number': customer.vat_number,
-                'payment_terms': customer.payment_terms,
-                'credit_limit': float(customer.credit_limit) if customer.credit_limit else None,
-                'notes': customer.notes,
-                'is_active': customer.is_active,
-                'created_at': customer.created_at.isoformat(),
-                'locations': [{
-                    'id': location.id,
-                    'name': location.name,
-                    'address': location.address,
-                    'postal_code': location.postal_code,
-                    'city': location.city,
-                    'country': location.country,
-                    'contact_person': location.contact_person,
-                    'phone': location.phone,
-                    'access_instructions': location.access_instructions,
-                    'notes': location.notes,
-                    'is_active': location.is_active
-                } for location in customer.locations if location.is_active]
-            }
+            'customer': customer.to_dict(include_locations=True)
         }), 200
         
     except Exception as e:

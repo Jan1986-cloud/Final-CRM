@@ -1,0 +1,13 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+repos:
+-   repo: local
+    hooks:
+    -   id: api-consistency-check
+        name: API Consistency Check
+        entry: python consistency_checker.py
+        language: python
+        types: [python, yaml]
+        files: ^(backend/src/models/database\.py|api_contracts\.yaml)$
+        pass_filenames: false
+        verbose: true

@@ -24,5 +24,5 @@ COPY . .
 # This is kept for good practice in case an entrypoint is re-introduced
 RUN chmod +x /app/entrypoint.sh
 
-# CMD instruction to start the application with maximum logging and an explicit app definition
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "1", "--log-level", "debug", "src.main:app"]
+# CMD instruction to start the application using the correct application factory
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "1", "--log-level", "debug", "src.main:create_app()"]

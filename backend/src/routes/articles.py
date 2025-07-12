@@ -29,25 +29,20 @@ def _parse_bool_arg(name, default=False):
 @articles_bp.route('/', methods=['GET'])
 @jwt_required()
 def get_articles():
-    """Get all articles for the company"""
+    """Get all articles for the company, adhering to the API contract."""
     try:
-        # Parse query parameters
         page = _parse_int_arg('page', 1)
         per_page = _parse_int_arg('per_page', 50, max_value=100)
         search = request.args.get('search', '').strip()
-        category_id = request.args.get('category_id') # Keep as string for UUID
+        category_id = request.args.get('category_id')
         active_only = _parse_bool_arg('active_only', True)
         low_stock = _parse_bool_arg('low_stock', False)
         
-        # Build query - ScopedQuery automatically filters by company_id
         query = Article.query
-        
         if active_only:
             query = query.filter(Article.is_active == True)
-        
         if category_id:
             query = query.filter(Article.category_id == category_id)
-        
         if low_stock:
             query = query.filter(Article.stock_quantity <= Article.min_stock_level)
         
@@ -60,31 +55,12 @@ def get_articles():
             )
             query = query.filter(search_filter)
         
-        query = query.order_by(Article.code)
-        
-        articles = query.paginate(
+        articles = query.order_by(Article.code).paginate(
             page=page, per_page=per_page, error_out=False
         )
         
         return jsonify({
-            'articles': [{
-                'id': article.id,
-                'code': article.code,
-                'name': article.name,
-                'description': article.description,
-                'unit': article.unit,
-                'purchase_price': float(article.purchase_price) if article.purchase_price else None,
-                'selling_price': float(article.selling_price),
-                'vat_rate': float(article.vat_rate),
-                'stock_quantity': float(article.stock_quantity),
-                'min_stock_level': float(article.min_stock_level),
-                'supplier': article.supplier,
-                'supplier_code': article.supplier_code,
-                'is_active': article.is_active,
-                'category_name': article.category.name if article.category else None,
-                'is_low_stock': article.stock_quantity <= article.min_stock_level,
-                'created_at': article.created_at.isoformat()
-            } for article in articles.items],
+            'articles': [article.to_dict() for article in articles.items],
             'pagination': {
                 'page': articles.page,
                 'pages': articles.pages,
@@ -101,33 +77,13 @@ def get_articles():
 @articles_bp.route('/<article_id>', methods=['GET'])
 @jwt_required()
 def get_article(article_id):
-    """Get specific article"""
+    """Get a specific article, adhering to the API contract."""
     try:
         article = Article.query.get(article_id)
-        
         if not article:
             return jsonify({'error': 'Article not found'}), 404
         
-        return jsonify({
-            'article': {
-                'id': article.id,
-                'code': article.code,
-                'name': article.name,
-                'description': article.description,
-                'unit': article.unit,
-                'purchase_price': float(article.purchase_price) if article.purchase_price else None,
-                'selling_price': float(article.selling_price),
-                'vat_rate': float(article.vat_rate),
-                'stock_quantity': float(article.stock_quantity),
-                'min_stock_level': float(article.min_stock_level),
-                'supplier': article.supplier,
-                'supplier_code': article.supplier_code,
-                'is_active': article.is_active,
-                'category_id': article.category_id,
-                'category_name': article.category.name if article.category else None,
-                'created_at': article.created_at.isoformat()
-            }
-        }), 200
+        return jsonify({'article': article.to_dict()}), 200
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -218,19 +174,10 @@ def update_article(article_id):
 @articles_bp.route('/categories', methods=['GET'])
 @jwt_required()
 def get_categories():
-    """Get all article categories"""
+    """Get all article categories, adhering to the API contract."""
     try:
         categories = ArticleCategory.query.order_by(ArticleCategory.name).all()
-        
-        return jsonify({
-            'categories': [{
-                'id': category.id,
-                'name': category.name,
-                'description': category.description,
-                'article_count': len(category.articles)
-            } for category in categories]
-        }), 200
-        
+        return jsonify({'categories': [category.to_dict() for category in categories]}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
